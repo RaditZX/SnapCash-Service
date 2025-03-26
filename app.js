@@ -12,9 +12,6 @@ require('dotenv').config();
 app.use(express.json({ limit: "50mb" }));  // Default biasanya 1MB, ubah ke 50MB
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
 app.use(logger('dev'));
 app.use(express.json());
