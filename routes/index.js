@@ -1,9 +1,11 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
+const { gptService, upload } = require('../service/gptService');
+
+const gpt = new gptService();
 
 /* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
-});
+require('./module/AuthRoute')(router);
+router.post('/generateInvoiceData', upload.single('image'), (req, res) => gpt.postDataPengeluaran(req, res));
 
 module.exports = router;
