@@ -1,4 +1,5 @@
 const firebase = require("../firebase-client");
+const admin = require("../firebase-service");
 const {
   getAuth,
   createUserWithEmailAndPassword,
