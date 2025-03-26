@@ -23,7 +23,7 @@ class firebaseService{
                 });
 
                 stream.on("finish", async () => {
-                    await fileUpload.makePublic(); // ✅ Bikin gambar bisa diakses publik
+                    await fileUpload.makePublic(); 
                     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
                     resolve(publicUrl);
                 });
