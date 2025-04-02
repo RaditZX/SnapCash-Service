@@ -8,11 +8,8 @@ const {
   sendEmailVerification,
 } = require("firebase/auth");
 const auth = getAuth(firebase);
+const { sendResponse } = require("../response");
 
-// Helper function for consistent responses
-const sendResponse = (statusCode, data, message, res) => {
-  res.status(statusCode).json({ data, message });
-};
 
 // Fetch user verification status by email
 const getUserVerificationStatusByEmail = async (email) => {
@@ -47,10 +44,11 @@ class AuthService {
         return sendResponse(400, req.body, "Email and password are required", res);
       }
 
-      await createUserWithEmailAndPassword(auth, email, password);
+      const user = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerificationLink(email);
 
       admin.firestore().collection("users").add({
+        userId: user.user.uid,
         email,
         creeatedAt: new Date(),
         updatedAt: new Date(),
@@ -60,7 +58,8 @@ class AuthService {
         202,
         req.body,
         "Verification email sent. Please verify your email before logging in.",
-        res
+        res,
+        true
       );
     } catch (error) {
       console.error(error);
@@ -68,7 +67,7 @@ class AuthService {
         error.code === "auth/email-already-in-use"
           ? "Email already exists"
           : error.message;
-      sendResponse(400, req.body, errorMessage, res);
+      sendResponse(400, req.body, errorMessage, res, false);
     }
   };
 
@@ -92,7 +91,8 @@ class AuthService {
           403,
           null,
           "Please verify your email before logging in. We have resent the verification email.",
-          res
+          res,
+          true
         );
       }
     } catch (error) {
@@ -101,7 +101,7 @@ class AuthService {
         error.code === "auth/user-not-found" || error.code === "auth/invalid-credential"
           ? "Incorrect email or password"
           : "Login failed";
-      sendResponse(500, error, errorMessage, res);
+      sendResponse(500, error, errorMessage, res, false);
     }
   };
 
@@ -112,13 +112,13 @@ class AuthService {
 
       if (user) {
         await signOut(auth);
-        sendResponse(200, null, "Sign out successfully", res);
+        sendResponse(200, null, "Sign out successfully", res, true);
       } else {
-        sendResponse(401, null, "User is not authenticated", res);
+        sendResponse(401, null, "User is not authenticated", res, false);
       }
     } catch (error) {
       console.error(error);
-      sendResponse(500, null, "Sign out failed", res);
+      sendResponse(500, null, "Sign out failed", res, false);
     }
   };
 }
