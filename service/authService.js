@@ -48,8 +48,13 @@ class AuthService {
       }
 
       await createUserWithEmailAndPassword(auth, email, password);
-
       await sendEmailVerificationLink(email);
+
+      admin.firestore().collection("users").add({
+        email,
+        creeatedAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       sendResponse(
         202,
