@@ -9,6 +9,7 @@ const {
 } = require("firebase/auth");
 const auth = getAuth(firebase);
 const { sendResponse } = require("../response");
+const { authRepository } = require("../repository/authRepository");
 
 
 // Fetch user verification status by email
@@ -35,6 +36,10 @@ const sendEmailVerificationLink = async (email) => {
 };
 
 class AuthService {
+  constructor() {
+    this.auth = getAuth(firebase);
+    this.repository = authRepository;
+  }
   // Sign up a new user
   signUp = async (req, res) => {
     const { email, password } = req.body;
@@ -47,12 +52,7 @@ class AuthService {
       const user = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerificationLink(email);
 
-      admin.firestore().collection("users").add({
-        userId: user.user.uid,
-        email,
-        creeatedAt: new Date(),
-        updatedAt: new Date(),
-      });
+      this.repository.createUser({userId: user.user.uid, email});
 
       sendResponse(
         202,
@@ -63,10 +63,12 @@ class AuthService {
       );
     } catch (error) {
       console.error(error);
-      const errorMessage =
-        error.code === "auth/email-already-in-use"
-          ? "Email already exists"
-          : error.message;
+      const errorMessages = {
+        "auth/email-already-in-use": "Email already exists",
+        "auth/invalid-email": "Invalid email address",
+        "auth/weak-password": "Password should be at least 6 characters",
+      };
+      const errorMessage = errorMessages[error.code] || error.message || "Sign up failed";
       sendResponse(400, req.body, errorMessage, res, false);
     }
   };
