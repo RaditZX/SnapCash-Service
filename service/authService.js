@@ -2,12 +2,11 @@ const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
 const {
   getAuth,
-  GoogleAuthProvider,
+  getIdToken,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
-  signInWithPopup
 } = require("firebase/auth");
 const auth = getAuth(firebase);
 const { sendResponse } = require("../response");
@@ -123,24 +122,20 @@ class AuthService {
     }
   };
 
-  
   signInWithGoogle = async (req, res) => {
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      const user = userCredential.user;
-      const token = await user.getIdToken();
+      const { user } = req;
 
-      sendResponse(200, { user, token }, "Login Successful", res);
+      sendResponse(200, { user }, "Login Successful", res);
     } catch (error) {
       console.error(error);
       sendResponse(500, error, "Login failed", res, false);
     }
   };
+
   registerWithGoogle = async (req, res) => {
     try {
-      const { userCredential } = req; // Extract userCredential from middleware token
-      const user = userCredential.user;
+      const { user } = req; // Extract userCredential from middleware token
 
       // Check if the user already exists in Firestore
       const existingUser = await this.repository.getUserByEmail(user.email);
