@@ -26,20 +26,20 @@ class authRepository{
     }
 
     async createUser(user) {
-        const { email, password } = user;
-        const userRecord = await admin.auth().createUser({
-            email: email,
-            password: password,
-        });
+        try {
+            const { email, userId } = user;
 
-        await this.db.collection("users").doc(userRecord.uid).set({
-            userId: userRecord.uid,
-            email: userRecord.email,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        });
-
-        return userRecord;
+            await this.db.collection("users").add({
+                userId: userId,
+                email: email,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            });
+            return user;
+        } catch (error) {
+            console.error("Error creating user:", error);
+            throw error;
+        }
     }
 
     async deleteUser(userId) {

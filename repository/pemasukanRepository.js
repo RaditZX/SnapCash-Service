@@ -21,9 +21,9 @@ class pemasukanRepository {
         return { id: doc.id, ...doc.data() };
     }
 
-    async createPemasukan(pemasukan) {
-        const docRef = await this.collection.add(pemasukan);
-        return { id: docRef.id, ...pemasukan };
+    async createPemasukan(pemasukan, userId) {
+        const docRef = await this.collection.add(pemasukan,userId);
+        return { id: docRef.id, ...pemasukan, userId };
     }
 
     async updatePemasukan(id, pemasukan) {
@@ -48,3 +48,5 @@ class pemasukanRepository {
 
 
 }
+
+module.exports = new pemasukanRepository();

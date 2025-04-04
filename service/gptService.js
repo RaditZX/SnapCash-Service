@@ -1,33 +1,46 @@
 const { default: axios } = require("axios");
 const multer = require('multer');
-const fs = require('fs');
-const {firebaseService} = require('./firebaseService')
+const {firebaseService} = require('./firebaseService');
+const {addPengeluaranByGPT } = require("../service/PengeluaranService");
+const { sendResponse } = require("../response");
+const { addPemasukanByGPT } = require("./PemasukanService");
 const firebase = new firebaseService();
 const upload = multer({ storage: multer.memoryStorage() });
 
 class gptService{
-    constructor(){}
+    constructor(){
+        this.firebase = firebase;
+    }
 
-    async postDataPengeluaran(req, res) {
+    async postDataPengeluaranOrPemasukanUsingGPT(req, res) {
         try {
+            // Validasi file
             if (!req.file) {
                 return res.status(400).json({ error: "Image is required" });
             }
-
-            // **Gunakan Firebase Storage yang sudah di-import**
-            const imageUrl = await firebase.uploadImageToFirebase(req.file);
-
+    
+            const imageUrl = await this.firebase.uploadImageToFirebase(req.file);
             if (!imageUrl) {
                 return res.status(500).json({ error: "Failed to upload image" });
             }
-
-            const result = await this.getInvoiceDataFromImage(imageUrl);
-            return res.json(result);
+    
+            const invoiceData = await this.getInvoiceDataFromImage(imageUrl);
+            console.log("Invoice Data:", invoiceData);
+            if (!invoiceData) {
+                return res.status(500).json({ error: "Failed to process invoice data" });
+            }
+    
+            const transactionType = this.determineIsPemasukanOrPengeluaran(invoiceData);
+            console.log("Transaction Type:", transactionType);
+            const result = await this.saveTransaction(transactionType, invoiceData);
+    
+            return sendResponse(200, result, "Data successfully processed", res, true);
         } catch (error) {
             console.error("Error processing image:", error);
-            return res.status(500).json({ error: "Failed to process image" });
+            return sendResponse(500, req.body, error.message, res);
         }
     }
+
 
     async getInvoiceDataFromImage(imageData) {
         try {
@@ -40,7 +53,7 @@ class gptService{
                                 url: imageData
                             },
                         },
-                            { type: "text", text:"dapatkan data nama produk, tanggal, toko, jumlah, subtotal, total, dan tambahan biaya lainnya berikan dalam format JSON berdasarkan tambahan biayanya, hanya JSON saja tanpa karakter escape atau \\n."}
+                            { type: "text", text:"dapatkan data namaPengeluaran, tanggal, toko, jumlah, subtotal, total, dan tambahanBiaya. Tentukan apakah struk ini termasuk pengeluaran atau pemasukan dalam atribut isPengeluaran (boolean). Jika isPengeluaran bernilai false, ubah namaPengeluaran menjadi namaPemasukan dan toko menjadi sumber. jika struk merupakan aktivitas bank jadikan bank sebagai toko atau sumber. Susun hasilnya berdasarkan tambahanBiaya secara berurutan berikan dalam format JSON berdasarkan tambahan biayanya.  hanya JSON saja tanpa karakter escape atau \\n."}
                         ]
                     }
                 ],
@@ -53,14 +66,35 @@ class gptService{
                     'Content-Type': 'application/json'
                 }
             });
-
-            return JSON.parse(response.data.choices[0].message.content);
+            return JSON.parse(response.data.choices[0].message.content)[0];
         } catch (error) {
             console.error('Error fetching invoice data from image:', error);
             throw error;
         }
     }
 
+    determineIsPemasukanOrPengeluaran(data) {
+        const { isPengeluaran } = data;
+        console.log("isPengeluaran:", isPengeluaran);
+        if (isPengeluaran === true) {
+            return "pengeluaran";
+        } else if (isPengeluaran === false) {
+            return "pemasukan";
+        } else {
+            return "unknown";
+        }
+    }
+
+        
+    async saveTransaction(transactionType, invoiceData) {
+        if (transactionType === "pemasukan") {
+            return await addPemasukanByGPT(invoiceData);
+        } else if (transactionType === "pengeluaran") {
+            return await addPengeluaranByGPT(invoiceData);
+        } else {
+            throw new Error("Invalid transaction type");
+        }
+    }
 
     
 }
