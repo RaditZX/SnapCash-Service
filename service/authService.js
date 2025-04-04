@@ -137,11 +137,9 @@ class AuthService {
       sendResponse(500, error, "Login failed", res, false);
     }
   };
-
   registerWithGoogle = async (req, res) => {
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
+      const { userCredential } = req; // Extract userCredential from middleware token
       const user = userCredential.user;
 
       // Check if the user already exists in Firestore
@@ -156,7 +154,7 @@ class AuthService {
       console.error(error);
       sendResponse(500, error, "Registration failed", res, false);
     }
-  }
+  };
 
 
   signOut = async (req, res) => {
