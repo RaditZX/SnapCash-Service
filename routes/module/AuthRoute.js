@@ -1,4 +1,5 @@
 const AuthService = require("../../service/authService");
+const verifyFirebaseToken = require("../../middleware/firebaseMiddleware");
 
 module.exports = (router) => {
     // Sign up a new user
@@ -11,8 +12,8 @@ module.exports = (router) => {
     router.post("/signout", AuthService.signOut);
 
     // Sign in with Google
-    router.post("/signinWithGoogle", AuthService.signInWithGoogle);
+    router.post("/signinWithGoogle", verifyFirebaseToken, AuthService.signInWithGoogle);
     // Register with Google
-    router.post("/registerWithGoogle", AuthService.registerWithGoogle);
+    router.post("/registerWithGoogle", verifyFirebaseToken, AuthService.registerWithGoogle);
     
 }
