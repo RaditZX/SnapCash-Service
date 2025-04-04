@@ -6,6 +6,7 @@ const gpt = new gptService();
 
 /* GET home page. */
 require('./module/AuthRoute')(router);
-router.post('/generateInvoiceData', upload.single('image'), (req, res) => gpt.postDataPengeluaran(req, res));
+require('./module/PengeluaranRoute')(router);
+router.post('/generateInvoiceData', upload.single('image'), (req, res) => gpt.postDataPengeluaranOrPemasukanUsingGPT(req, res));
 
 module.exports = router;

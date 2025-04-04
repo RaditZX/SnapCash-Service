@@ -2,14 +2,16 @@ const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
 const {
   getAuth,
+  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
+  signInWithPopup
 } = require("firebase/auth");
 const auth = getAuth(firebase);
 const { sendResponse } = require("../response");
-const { authRepository } = require("../repository/authRepository");
+const authRepository = require("../repository/authRepository");
 
 
 // Fetch user verification status by email
@@ -40,7 +42,22 @@ class AuthService {
     this.auth = getAuth(firebase);
     this.repository = authRepository;
   }
-  // Sign up a new user
+
+  getUserAuthenticate = async (req, res) => {
+    try{
+      const userId = auth.currentUser ? auth.currentUser.uid : null;
+        
+      if (!userId) {
+          return sendResponse(401, req.body, "User not authenticated", res);
+      }
+
+      return userId;
+    }catch (error) {
+      console.error(error);
+      sendResponse(500, req.body, "Error fetching user authentication", res, false);
+    }
+  };
+
   signUp = async (req, res) => {
     const { email, password } = req.body;
 
@@ -73,7 +90,6 @@ class AuthService {
     }
   };
 
-  // Sign in an existing user
   signIn = async (req, res) => {
     const { email, password } = req.body;
 
@@ -107,7 +123,42 @@ class AuthService {
     }
   };
 
-  // Sign out the current user
+  
+  signInWithGoogle = async (req, res) => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+      const token = await user.getIdToken();
+
+      sendResponse(200, { user, token }, "Login Successful", res);
+    } catch (error) {
+      console.error(error);
+      sendResponse(500, error, "Login failed", res, false);
+    }
+  };
+
+  registerWithGoogle = async (req, res) => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+
+      // Check if the user already exists in Firestore
+      const existingUser = await this.repository.getUserByEmail(user.email);
+      if (!existingUser) {
+        // If not, create a new user in Firestore
+        await this.repository.createUser({ userId: user.uid, email: user.email });
+      }
+
+      sendResponse(200, { user }, "Registration successful", res, true);
+    } catch (error) {
+      console.error(error);
+      sendResponse(500, error, "Registration failed", res, false);
+    }
+  }
+
+
   signOut = async (req, res) => {
     try {
       const user = auth.currentUser;

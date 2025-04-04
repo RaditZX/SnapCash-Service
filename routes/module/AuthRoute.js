@@ -9,5 +9,10 @@ module.exports = (router) => {
     
     // Sign out the current user
     router.post("/signout", AuthService.signOut);
+
+    // Sign in with Google
+    router.post("/signinWithGoogle", AuthService.signInWithGoogle);
+    // Register with Google
+    router.post("/registerWithGoogle", AuthService.registerWithGoogle);
     
 }
