@@ -11,7 +11,7 @@ class pengeluaranService {
 
     getPengeluaran = async (req, res) => {
         try {
-            const userId = await auth.getUserAuthenticate();
+            const userId = await auth.getUserAuthenticate(req.user);
             const result = await this.repository.getAllPengeluaran(userId);
             if (!result) {
                 return sendResponse(
@@ -104,7 +104,7 @@ class pengeluaranService {
         this.pengeluaran = this.pengeluaran.filter((p) => p.id !== id);
     }
 
-    addPengeluaranByGPT = async (pengeluaranData) => {
+    addPengeluaranByGPT = async (pengeluaranData, user) => {
         try {
             const {
                 namaPengeluaran,
@@ -137,7 +137,7 @@ class pengeluaranService {
                 );
             }
 
-            const userId = await auth.getUserAuthenticate();
+            const userId = await auth.getUserAuthenticate(user);
 
             // Simpan data pengeluaran
             const newPengeluaran = await this.repository.addPengeluaran({
