@@ -10,6 +10,13 @@ class firebaseService{
             const fileName = `invoices/${Date.now()}_${file.originalname}`;
             const fileUpload = bucket.file(fileName);
 
+            const [exists] = await fileUpload.exists();
+            if (exists) {
+                console.log("✅ File already exists, using existing one.");
+                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+                return publicUrl;
+            }
+
             const stream = fileUpload.createWriteStream({
                 metadata: {
                     contentType: file.mimetype

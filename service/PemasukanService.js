@@ -1,5 +1,7 @@
 const pemasukanRepository = require("../repository/pemasukanRepository");
 const { sendResponse } = require("../response");
+const auth = require("./authService");
+
 class PemasukanService{
     constructor(){
         this.pemasukanRepository = pemasukanRepository;
@@ -13,7 +15,7 @@ class PemasukanService{
         return await this.pemasukanRepository.getPemasukanById(id);
     }
 
-    addPemasukanByGPT = async (req,res) => {
+    addPemasukan = async (req,res) => {
         try {
             const {
                 namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
@@ -54,7 +56,7 @@ class PemasukanService{
         return await this.pemasukanRepository.deletePemasukan(id);
     }
 
-    addPemasukanByGPT = async (pemasukanData) => {
+    addPemasukanByGPT = async (pemasukanData, user) => {
         try {
             const {
                 namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
@@ -64,7 +66,7 @@ class PemasukanService{
                 throw new Error("All fields are required");
             }
         
-            const userId = await auth.getUserAuthenticate();
+            const userId = await auth.getUserAuthenticate(user);
         
             // Simpan data pengeluaran
             const newPemasukan = await this.pemasukanRepository.createPemasukan({

@@ -42,20 +42,20 @@ class AuthService {
     this.repository = authRepository;
   }
 
-  getUserAuthenticate = async (req, res) => {
+  getUserAuthenticate = async (user) => {
     try{
-      const userId = auth.currentUser ? auth.currentUser.uid : null;
+      const userId = user.uid;
         
       if (!userId) {
-          return sendResponse(401, req.body, "User not authenticated", res);
+          throw new Error("User not authenticated");
       }
 
       return userId;
     }catch (error) {
       console.error(error);
-      sendResponse(500, req.body, "Error fetching user authentication", res, false);
+      throw new Error("User not authenticated", error);
+      };
     }
-  };
 
   signUp = async (req, res) => {
     const { email, password } = req.body;

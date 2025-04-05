@@ -12,7 +12,7 @@ class gptService{
         this.firebase = firebase;
     }
 
-    async postDataPengeluaranOrPemasukanUsingGPT(req, res) {
+   postDataPengeluaranOrPemasukanUsingGPT =  async (req, res) => {
         try {
             // Validasi file
             if (!req.file) {
@@ -23,16 +23,15 @@ class gptService{
             if (!imageUrl) {
                 return res.status(500).json({ error: "Failed to upload image" });
             }
-    
+            const user = req.user;
             const invoiceData = await this.getInvoiceDataFromImage(imageUrl);
-            console.log("Invoice Data:", invoiceData);
+
             if (!invoiceData) {
                 return res.status(500).json({ error: "Failed to process invoice data" });
             }
     
             const transactionType = this.determineIsPemasukanOrPengeluaran(invoiceData);
-            console.log("Transaction Type:", transactionType);
-            const result = await this.saveTransaction(transactionType, invoiceData);
+            const result = await this.saveTransaction(transactionType, invoiceData, user);
     
             return sendResponse(200, result, "Data successfully processed", res, true);
         } catch (error) {
@@ -86,11 +85,11 @@ class gptService{
     }
 
         
-    async saveTransaction(transactionType, invoiceData) {
+    async saveTransaction(transactionType, invoiceData, user) {
         if (transactionType === "pemasukan") {
-            return await addPemasukanByGPT(invoiceData);
+            return await addPemasukanByGPT(invoiceData, user);
         } else if (transactionType === "pengeluaran") {
-            return await addPengeluaranByGPT(invoiceData);
+            return await addPengeluaranByGPT(invoiceData, user);
         } else {
             throw new Error("Invalid transaction type");
         }
