@@ -20,12 +20,30 @@ class PemasukanService{
             const {
                 namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
             } = req.body;
+
+            console.log("Request body:", req.body); // Tambahkan log ini untuk memeriksa isi request body
     
-            if (! namaPemasukan || !tanggal || !sumber || !jumlah || !subtotal || !total || !tambahanBiaya || !isPengeluaran) {
-                sendResponse(400, req.body, "All fields are required", res);
+            const missingFields = [];
+            if (!namaPemasukan) missingFields.push("nama pemasukan");
+            if (!tanggal) missingFields.push("tanggal");
+            if (!sumber) missingFields.push("sumber");
+            if (!jumlah) missingFields.push("jumlah");
+            if (!subtotal) missingFields.push("subtotal");
+            if (!total) missingFields.push("total");
+            if (!tambahanBiaya) missingFields.push("tambahanBiaya");
+            if (isPengeluaran === undefined || isPengeluaran === null)
+                missingFields.push("isPengeluaran");
+
+            if (missingFields.length > 0) {
+                return sendResponse(
+                    400,
+                    req.body,
+                    `All fields are required. Missing: ${missingFields.join(", ")}`,
+                    res
+                );
             }
         
-            const userId = await auth.getUserAuthenticate();
+            const userId = await auth.getUserAuthenticate(req.user);
         
             // Simpan data pengeluaran
             const newPemasukan = await this.pemasukanRepository.createPemasukan({
@@ -52,9 +70,29 @@ class PemasukanService{
         return await this.pemasukanRepository.updatePemasukan(id, pemasukan);
     }
 
-    async deletePemasukan(id){
-        return await this.pemasukanRepository.deletePemasukan(id);
-    }
+    deletePemasukan = async(req,res) =>{
+        try {
+            const { id } = req.body;
+
+            if (!id) {
+                sendResponse(400, req.body, "Missing document ID", res);
+                return;
+            }
+
+            const userId = await auth.getUserAuthenticate(req.user);
+
+            const deletedPemasukan = await this.pemasukanRepository.deletePemasukan(id, userId);
+
+            if (!deletedPemasukan) {
+                sendResponse(404, req.body, "Pemasukan not found or unauthorized", res);
+                return;
+            }
+
+            sendResponse(200, deletedPemasukan, "Pemasukan successfully deleted", res, true);
+        }catch (error) {
+            sendResponse(500, req.body, "Error deleting pemasukan service: " + error.message, res);
+        }
+    };
 
     addPemasukanByGPT = async (pemasukanData, user) => {
         try {

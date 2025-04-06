@@ -22,30 +22,36 @@ class pemasukanRepository {
     }
 
     async createPemasukan(pemasukan, userId) {
-        const docRef = await this.collection.add(pemasukan,userId);
+        const docRef = await this.collection.add({...pemasukan,userId});
         return { id: docRef.id, ...pemasukan, userId };
     }
 
-    async updatePemasukan(id, pemasukan) {
+    async updatePemasukan(id, pemasukan, userId) {
         const docRef = this.collection.doc(id);
         const doc = await docRef.get();
         if (!doc.exists) {
             throw new Error('Pemasukan not found');
         }
-        await docRef.update(pemasukan);
-        return { id, ...pemasukan };
+        await docRef.update({...pemasukan,userId});
+        return { id, ...pemasukan, userId };
     }
 
-    async deletePemasukan(id) {
-        const docRef = this.collection.doc(id);
-        const doc = await docRef.get();
-        if (!doc.exists) {
-            throw new Error('Pemasukan not found');
+    async deletePemasukan(id,userId) {
+        try {
+            const docRef = this.collection.doc(id);
+            const snapshot = await docRef.get();
+    
+            if (!snapshot.exists) return null;
+    
+            const data = snapshot.data();
+            if (data.userId !== userId) return null;
+    
+            await docRef.delete();
+            return { message: "Pengeluaran berhasil dihapus" };
+        } catch (error) {
+            throw new Error("Gagal menghapus pengeluaran: " + error.message);
         }
-        await docRef.delete();
-        return { id };
     }
-
 
 }
 
