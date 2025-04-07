@@ -172,12 +172,29 @@ class PemasukanService{
     addPemasukanByGPT = async (pemasukanData, user) => {
         try {
             const {
-                namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
+                namaPemasukan, tanggal, sumber, total, tambahanBiaya, id_subKategori, isPengeluaran
             } = pemasukanData;
-    
-            if (! namaPemasukan || !tanggal || !sumber || !jumlah || !subtotal || !total || !tambahanBiaya || !isPengeluaran) {
-                throw new Error("All fields are required");
+
+            console.log("Pemasukan Data:", pemasukanData);
+
+            const missingFields = [];
+            if (!namaPemasukan) missingFields.push("namaPemasukan");
+            if (!tanggal) missingFields.push("tanggal");
+            if (!sumber) missingFields.push("sumber");
+            if (!total) missingFields.push("total");
+            if (tambahanBiaya === undefined || tambahanBiaya === null || Number.isNaN(parseInt(tambahanBiaya))) {
+                missingFields.push("tambahanBiaya");
+            }            
+            if (isPengeluaran === undefined || isPengeluaran === null)
+                missingFields.push("isPengeluaran");
+
+            if (missingFields.length > 0) {
+                throw new Error(
+                    `All fields are required. Missing: ${missingFields.join(", ")}`
+                );
             }
+    
+     
         
             const userId = await auth.getUserAuthenticate(user);
         
@@ -186,8 +203,6 @@ class PemasukanService{
                 namaPemasukan,
                 tanggal,
                 sumber,
-                jumlah,
-                subtotal,
                 total,
                 tambahanBiaya,
                 isPengeluaran
