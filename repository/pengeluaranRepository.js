@@ -39,14 +39,16 @@ class PengeluaranRepository {
       }
     }
 
-    async updatePengeluaran(id, pengeluaranData) {
-      try {
-        await this.collection.doc(id).update(pengeluaranData);
-        return { id, ...pengeluaranData };
-      } catch (error) {
-        throw new Error("Error updating pengeluaran: " + error.message);
+    async updatePengeluaran(id, pengeluaranData, userId) {
+      const docRef = this.collection.doc(id);
+      const doc = await docRef.get();
+      if (!doc.exists) {
+          throw new Error('Pengeluaran not found');
       }
-    }
+      await docRef.update({ ...pengeluaranData, userId });
+      return { id, ...pengeluaranData, userId };
+  }
+  
 
     async deletePengeluaran(id, userId) {
       try {

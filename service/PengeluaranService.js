@@ -102,16 +102,71 @@ class pengeluaranService {
         }
     };
 
-    deletePengeluaran = async (req, res) => {
+
+    updatePengeluaran = async (req, res) => {
+        try {
+            const {
+                namaPengeluaran, tanggal, toko, jumlah, subtotal, total,
+                tambahanBiaya, id_subKategori, isPengeluaran
+            } = req.body;
+            const { id } = req.params;
+    
+            console.log("Request body:", req.body);
+            console.log("ID:", id);
+    
+            // Cek minimal satu field diisi
+            const isAnyFieldProvided = [
+                namaPengeluaran,
+                tanggal,
+                toko,
+                jumlah,
+                subtotal,
+                total,
+                tambahanBiaya,
+                isPengeluaran
+            ].some(field => field !== undefined && field !== null && field !== '');
+    
+            if (!isAnyFieldProvided) {
+                return sendResponse(
+                    400,
+                    req.body,
+                    "Minimal satu field harus diisi untuk melakukan update.",
+                    res
+                );
+
+            }
+    
+            const userId = await auth.getUserAuthenticate(req.user);
+
+    
+            // Buat object field yang akan diupdate (hanya field yang tidak kosong/null)
+            const updateData = {};
+            if (namaPengeluaran !== undefined) updateData.namaPengeluaran = namaPengeluaran;
+            if (tanggal !== undefined) updateData.tanggal = tanggal;
+            if (toko !== undefined) updateData.toko = toko;
+            if (jumlah !== undefined) updateData.jumlah = jumlah;
+            if (subtotal !== undefined) updateData.subtotal = subtotal;
+            if (total !== undefined) updateData.total = total;
+            if (tambahanBiaya !== undefined) updateData.tambahanBiaya = tambahanBiaya;
+            if (id_subKategori !== undefined) updateData.id_subKategori = id_subKategori;
+            if (isPengeluaran !== undefined) updateData.isPengeluaran = isPengeluaran;
+    
+            // Update data pengeluaran
+            const updatedPengeluaran = await this.pengeluaranRepository.updatePengeluaran(id, updateData, userId);
+    
+            sendResponse(200, updatedPengeluaran, "Data successfully updated", res, true);
+    
+        } catch (error) {
+            sendResponse(500, req.body, "Error updating pengeluaran service: " + error.message, res);
+        }
+    };
+  
+     deletePengeluaran = async (req, res) => {
         try {
             const { id } = req.body;
     
             if (!id) {
                 return sendResponse(400, req.body, "Missing document ID", res);
-            }
-    
-            const userId = await auth.getUserAuthenticate(req.user);
-    
             const deletedPengeluaran = await this.repository.deletePengeluaran(id, userId);
     
             if (!deletedPengeluaran) {
@@ -126,8 +181,6 @@ class pengeluaranService {
         }
     };
     
-    
- 
 
     addPengeluaranByGPT = async (pengeluaranData, user) => {
         try {

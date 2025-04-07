@@ -23,8 +23,10 @@ class pemasukanRepository {
 
     async createPemasukan(pemasukan, userId) {
         const docRef = await this.collection.add({...pemasukan,userId});
-        return { id: docRef.id, ...pemasukan, userId };
-    }
+
+        return { id: docRef.id, ...pemasukan, userId };
+    }
+
 
     async updatePemasukan(id, pemasukan, userId) {
         const docRef = this.collection.doc(id);
@@ -33,8 +35,9 @@ class pemasukanRepository {
             throw new Error('Pemasukan not found');
         }
         await docRef.update({...pemasukan,userId});
-        return { id, ...pemasukan, userId };
-    }
+        return { id, ...pemasukan, userId };
+    }
+
 
     async deletePemasukan(id,userId) {
         try {
