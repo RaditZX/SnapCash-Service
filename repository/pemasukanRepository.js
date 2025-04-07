@@ -49,18 +49,6 @@ class pemasukanRepository {
     }
 
 
-
-    async updatePemasukan(id, pemasukan, userId) {
-        const docRef = this.collection.doc(id);
-        const doc = await docRef.get();
-        if (!doc.exists) {
-            throw new Error('Pemasukan not found');
-        }
-        await docRef.update({...pemasukan,userId});
-        return { id, ...pemasukan, userId };
-    }
-
-
     async deletePemasukan(id,userId) {
         try {
             const docRef = this.collection.doc(id);
