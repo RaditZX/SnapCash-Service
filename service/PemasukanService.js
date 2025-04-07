@@ -7,9 +7,35 @@ class PemasukanService{
         this.pemasukanRepository = pemasukanRepository;
     }
 
-    async getAllPemasukan(){
-        return await this.pemasukanRepository.getAllPemasukan();
-    }
+    getPemasukanUser = async (req, res) => {
+            try {
+                const userId = await auth.getUserAuthenticate(req.user);
+                const result = await this.pemasukanRepository.getAllPemasukan(userId);
+                if (!result) {
+                    return sendResponse(
+                        404,
+                        req.body,
+                        "Pemasukan not found",
+                        res
+                    );
+                }
+                sendResponse(
+                    200,
+                    result,
+                    "Data successfully retrieved",
+                    res,
+                    true
+                );
+            } catch (error) {
+                console.error(error);
+                sendResponse(
+                    500,
+                    req.body,
+                    "Error retrieving pemasukan: " + error.message,
+                    res
+                );
+            }
+        }
 
     async getPemasukanById(id){
         return await this.pemasukanRepository.getPemasukanById(id);
@@ -20,8 +46,6 @@ class PemasukanService{
             const {
                 namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
             } = req.body;
-
-            console.log("Request body:", req.body); // Tambahkan log ini untuk memeriksa isi request body
     
             const missingFields = [];
             if (!namaPemasukan) missingFields.push("nama pemasukan");
@@ -38,8 +62,9 @@ class PemasukanService{
                 return sendResponse(
                     400,
                     req.body,
-                    `All fields are required. Missing: ${missingFields.join(", ")}`,
-                    res
+                    'All fields are required. Missing: ${missingFields.join(", ")}',
+                    res,
+                    false
                 );
             }
         
@@ -65,14 +90,84 @@ class PemasukanService{
         
     };
 
-   
-    async updatePemasukan(id, pemasukan){
-        return await this.pemasukanRepository.updatePemasukan(id, pemasukan);
-    }
+    updatePemasukan = async (req, res) => {
+        try {
+            const {
+                namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
+            } = req.body;
+            const { id } = req.params;
+    
+            console.log("Request body:", req.body);
+            console.log("ID:", id);
+    
+            // Cek minimal satu field diisi
+            const isAnyFieldProvided = [
+                namaPemasukan,
+                tanggal,
+                sumber,
+                jumlah,
+                subtotal,
+                total,
+                tambahanBiaya,
+                isPengeluaran
+            ].some(field => field !== undefined && field !== null && field !== '');
+    
+            if (!isAnyFieldProvided) {
+                return sendResponse(
+                    400,
+                    req.body,
+                    "Minimal satu field harus diisi untuk melakukan update.",
+                    res
+                );
+            }
+    
+            const userId = await auth.getUserAuthenticate(req.user);
+    
+            // Buat object field yang akan diupdate (hanya field yang tidak kosong/null)
+            const updateData = {};
+            if (namaPemasukan !== undefined) updateData.namaPemasukan = namaPemasukan;
+            if (tanggal !== undefined) updateData.tanggal = tanggal;
+            if (sumber !== undefined) updateData.sumber = sumber;
+            if (jumlah !== undefined) updateData.jumlah = jumlah;
+            if (subtotal !== undefined) updateData.subtotal = subtotal;
+            if (total !== undefined) updateData.total = total;
+            if (tambahanBiaya !== undefined) updateData.tambahanBiaya = tambahanBiaya;
+            if (isPengeluaran !== undefined) updateData.isPengeluaran = isPengeluaran;
+    
+            // Update data pemasukan
+            const updatedPemasukan = await this.pemasukanRepository.updatePemasukan(id, updateData, userId);
+    
+            sendResponse(200, updatedPemasukan, "Data successfully updated", res, true);
+    
+        } catch (error) {
+            sendResponse(500, req.body, "Error updating pemasukan service: " + error.message, res);
+        }
+    };
+    
 
-    async deletePemasukan(id){
-        return await this.pemasukanRepository.deletePemasukan(id);
-    }
+    deletePemasukan = async(req,res) =>{
+        try {
+            const { id } = req.body;
+
+            if (!id) {
+                sendResponse(400, req.body, "Missing document ID", res);
+                return;
+            }
+
+            const userId = await auth.getUserAuthenticate(req.user);
+
+            const deletedPemasukan = await this.pemasukanRepository.deletePemasukan(id, userId);
+
+            if (!deletedPemasukan) {
+                sendResponse(404, req.body, "Pemasukan not found or unauthorized", res);
+                return;
+            }
+
+            sendResponse(200, deletedPemasukan, "Pemasukan successfully deleted", res, true);
+        }catch (error) {
+            sendResponse(500, req.body, "Error deleting pemasukan service: " + error.message, res);
+        }
+    };
 
     addPemasukanByGPT = async (pemasukanData, user) => {
         try {
