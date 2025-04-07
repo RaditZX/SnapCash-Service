@@ -20,8 +20,6 @@ class PemasukanService{
             const {
                 namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
             } = req.body;
-
-            console.log("Request body:", req.body);
     
             const missingFields = [];
             if (!namaPemasukan) missingFields.push("nama pemasukan");
@@ -39,7 +37,8 @@ class PemasukanService{
                     400,
                     req.body,
                     'All fields are required. Missing: ${missingFields.join(", ")}',
-                    res
+                    res,
+                    false
                 );
             }
         
@@ -120,9 +119,29 @@ class PemasukanService{
     };
     
 
-    async deletePemasukan(id){
-        return await this.pemasukanRepository.deletePemasukan(id);
-    }
+    deletePemasukan = async(req,res) =>{
+        try {
+            const { id } = req.body;
+
+            if (!id) {
+                sendResponse(400, req.body, "Missing document ID", res);
+                return;
+            }
+
+            const userId = await auth.getUserAuthenticate(req.user);
+
+            const deletedPemasukan = await this.pemasukanRepository.deletePemasukan(id, userId);
+
+            if (!deletedPemasukan) {
+                sendResponse(404, req.body, "Pemasukan not found or unauthorized", res);
+                return;
+            }
+
+            sendResponse(200, deletedPemasukan, "Pemasukan successfully deleted", res, true);
+        }catch (error) {
+            sendResponse(500, req.body, "Error deleting pemasukan service: " + error.message, res);
+        }
+    };
 
     addPemasukanByGPT = async (pemasukanData, user) => {
         try {
