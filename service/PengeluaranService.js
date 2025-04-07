@@ -202,9 +202,9 @@ class pengeluaranService {
             if (!toko) missingFields.push("toko");
             if (!total) missingFields.push("total");
             if (!barang) missingFields.push("barang");
-            if (!tambahanBiaya || Number.isNaN(parseInt(tambahanBiaya))) {
+            if (!tambahanBiaya) {
                 missingFields.push("tambahanBiaya");
-            }            
+            }        
             if (isPengeluaran === undefined || isPengeluaran === null)
                 missingFields.push("isPengeluaran");
 
