@@ -1,4 +1,4 @@
-const pemasukanRepository = require("../repository/PemasukanRepository");
+const pemasukanRepository = require("../repository/pemasukanRepository");
 const { sendResponse } = require("../response");
 const auth = require("./authService");
 
