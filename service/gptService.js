@@ -51,7 +51,7 @@ class gptService{
                             { type: "image_url", "image_url": {
                                 url: imageData
                             },
-                        },
+                        }, 
                             { type: "text", text:"Dapatkan data dari struk berupa namaPengeluaran, tanggal, toko, total, dan tambahanBiaya. Tentukan apakah transaksi dalam struk tersebut merupakan pengeluaran atau pemasukan dengan menambahkan atribut isPengeluaran bertipe boolean. Jika isPengeluaran bernilai false (pemasukan), ubah atribut namaPengeluaran menjadi namaPemasukan dan atribut toko menjadi sumber. Jika struk menunjukkan aktivitas bank, gunakan nama bank tersebut sebagai nilai dari toko atau sumber, tergantung jenis transaksinya. Format tanggal harus diubah menjadi bentuk yang lengkap seperti “21 Maret 2025, 12:12:52 WIB”. Jika isPengeluaran bernilai true (pengeluaran), tambahkan atribut barang yang merupakan objek berisi daftar barang yang dibeli. Setiap item dalam daftar ini harus mencakup namaBarang, jumlah, harga (>0), dan kategori (seperti makanan, fashion, elektronik, dan sebagainya). Susun hasilnya berdasarkan tambahanBiaya secara berurutan berikan dalam format JSON berdasarkan tambahan biayanya.  hanya JSON saja tanpa karakter escape atau \\n."}
                         ]
                     }
@@ -65,6 +65,7 @@ class gptService{
                     'Content-Type': 'application/json'
                 }
             });
+            console.log("Response from AI:", response.data.choices[0].message.content);
             return JSON.parse(response.data.choices[0].message.content)[0];
         } catch (error) {
             console.error('Error fetching invoice data from image:', error);
