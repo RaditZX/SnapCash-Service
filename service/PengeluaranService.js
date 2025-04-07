@@ -49,7 +49,7 @@ class pengeluaranService {
                 subtotal,
                 total,
                 tambahanBiaya,
-                id_subKategori,
+                // id_subKategori,
                 isPengeluaran,
             } = req.body;
 
@@ -61,6 +61,7 @@ class pengeluaranService {
             if (!subtotal) missingFields.push("subtotal");
             if (!total) missingFields.push("total");
             if (!tambahanBiaya) missingFields.push("tambahanBiaya");
+            // if (!id_subKategori) missingFields.push("id_subKategori");
             if (isPengeluaran === undefined || isPengeluaran === null)
                 missingFields.push("isPengeluaran");
 
@@ -71,6 +72,7 @@ class pengeluaranService {
                     `All fields are required. Missing: ${missingFields.join(", ")}`,
                     res
                 );
+                return;
             }
 
             const userId = await auth.getUserAuthenticate(req.user);
@@ -155,11 +157,28 @@ class pengeluaranService {
             sendResponse(500, req.body, "Error updating pengeluaran service: " + error.message, res);
         }
     };
+  
+     deletePengeluaran = async (req, res) => {
+        try {
+            const { id } = req.body;
     
-
-    deletePengeluaran(id) {
-        this.pengeluaran = this.pengeluaran.filter((p) => p.id !== id);
-    }
+            if (!id) {
+                return sendResponse(400, req.body, "Missing document ID", res);
+            }
+            const deletedPengeluaran = await this.repository.deletePengeluaran(id, userId);
+    
+            if (!deletedPengeluaran) {
+                return sendResponse(404, req.body, "Pengeluaran tidak ditemukan atau tidak diizinkan", res);
+            }
+    
+           
+            sendResponse(200, deletedPengeluaran, "Pengeluaran berhasil dihapus", res, true);
+        } catch (error) {
+            console.error(error);
+            sendResponse(500, req.body, "Gagal menghapus pengeluaran: " + error.message, res);
+        }
+    };
+    
 
     addPengeluaranByGPT = async (pengeluaranData, user) => {
         try {

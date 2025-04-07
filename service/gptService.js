@@ -52,7 +52,7 @@ class gptService{
                                 url: imageData
                             },
                         },
-                            { type: "text", text:"dapatkan data namaPengeluaran, tanggal, toko, jumlah, subtotal, total, dan tambahanBiaya. Tentukan apakah struk ini termasuk pengeluaran atau pemasukan dalam atribut isPengeluaran (boolean). Jika isPengeluaran bernilai false, ubah namaPengeluaran menjadi namaPemasukan dan toko menjadi sumber. jika struk merupakan aktivitas bank jadikan bank sebagai toko atau sumber. Susun hasilnya berdasarkan tambahanBiaya secara berurutan berikan dalam format JSON berdasarkan tambahan biayanya.  hanya JSON saja tanpa karakter escape atau \\n."}
+                            { type: "text", text:"dapatkan data namaPengeluaran, tanggal, toko, jumlah, subtotal, total, dan tambahanBiaya. Tentukan apakah struk ini termasuk pengeluaran atau pemasukan dalam atribut isPengeluaran (boolean). Jika isPengeluaran bernilai false, ubah namaPengeluaran menjadi namaPemasukan dan toko menjadi sumber. jika struk merupakan aktivitas bank jadikan bank sebagai toko atau sumber. Kemudian buat data tanggal dalam format seperti 21 Maret 2025, 12:12:52 WIB Susun hasilnya berdasarkan tambahanBiaya secara berurutan berikan dalam format JSON berdasarkan tambahan biayanya.  hanya JSON saja tanpa karakter escape atau \\n."}
                         ]
                     }
                 ],
