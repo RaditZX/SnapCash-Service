@@ -8,24 +8,46 @@ class pemasukanRepository {
         this.collection = this.db.collection('Pemasukan');
     }
 
-    async getAllPemasukan() {
-        const snapshot = await this.collection.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
-
-    async getPemasukanById(id) {
-        const doc = await this.collection.doc(id).get();
-        if (!doc.exists) {
-            throw new Error('Pemasukan not found');
+    async getAllPemasukan(userId) {
+        try {
+          const snapshot = await this.collection.where("userId", "==", userId).get();
+          if (snapshot.empty) {
+            return []; // Jika tidak ada data, kembalikan array kosong
+          }
+          return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+          throw new Error("Error fetching pengeluaran: " + error.message);
         }
-        return { id: doc.id, ...doc.data() };
+      }
+
+    async getAllPengeluaran(userId) {
+      try {
+        const snapshot = await this.collection.where("userId", "==", userId).get();
+        if (snapshot.empty) {
+          return []; // Jika tidak ada data, kembalikan array kosong
+        }
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (error) {
+        throw new Error("Error fetching pengeluaran: " + error.message);
+      }
     }
 
     async createPemasukan(pemasukan, userId) {
         const docRef = await this.collection.add({...pemasukan,userId});
+        return { id: docRef.id, ...pemasukan, userId };
+    }
+
+    async updatePemasukan(id, pemasukan, userId) {
+        const docRef = this.collection.doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists) {
+            throw new Error('Pemasukan not found');
+        }
+        await docRef.update({...pemasukan,userId});
 
         return { id: docRef.id, ...pemasukan, userId };
     }
+
 
 
     async updatePemasukan(id, pemasukan, userId) {

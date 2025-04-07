@@ -102,7 +102,6 @@ class pengeluaranService {
         }
     };
 
-
     updatePengeluaran = async (req, res) => {
         try {
             const {
@@ -160,6 +159,7 @@ class pengeluaranService {
             sendResponse(500, req.body, "Error updating pengeluaran service: " + error.message, res);
         }
     };
+
   
      deletePengeluaran = async (req, res) => {
         try {
@@ -182,6 +182,7 @@ class pengeluaranService {
         }
     };
     
+
 
     addPengeluaranByGPT = async (pengeluaranData, user) => {
         try {

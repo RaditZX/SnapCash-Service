@@ -7,9 +7,35 @@ class PemasukanService{
         this.pemasukanRepository = pemasukanRepository;
     }
 
-    async getAllPemasukan(){
-        return await this.pemasukanRepository.getAllPemasukan();
-    }
+    getPemasukanUser = async (req, res) => {
+            try {
+                const userId = await auth.getUserAuthenticate(req.user);
+                const result = await this.pemasukanRepository.getAllPemasukan(userId);
+                if (!result) {
+                    return sendResponse(
+                        404,
+                        req.body,
+                        "Pemasukan not found",
+                        res
+                    );
+                }
+                sendResponse(
+                    200,
+                    result,
+                    "Data successfully retrieved",
+                    res,
+                    true
+                );
+            } catch (error) {
+                console.error(error);
+                sendResponse(
+                    500,
+                    req.body,
+                    "Error retrieving pemasukan: " + error.message,
+                    res
+                );
+            }
+        }
 
     async getPemasukanById(id){
         return await this.pemasukanRepository.getPemasukanById(id);
