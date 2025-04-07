@@ -126,7 +126,7 @@ class AuthService {
     try {
       const { user } = req;
 
-      sendResponse(200, { user }, "Login Successful", res);
+      sendResponse(200, { user }, "Login Successful", res, true);
     } catch (error) {
       console.error(error);
       sendResponse(500, error, "Login failed", res, false);
