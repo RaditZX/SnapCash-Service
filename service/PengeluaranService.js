@@ -73,7 +73,7 @@ class pengeluaranService {
                 );
             }
 
-            const userId = await auth.getUserAuthenticate();
+            const userId = await auth.getUserAuthenticate(req.user);
 
             // Simpan data pengeluaran
             const newPengeluaran = await this.repository.addPengeluaran({
