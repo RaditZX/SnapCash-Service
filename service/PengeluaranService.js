@@ -186,11 +186,10 @@ class pengeluaranService {
                 namaPengeluaran,
                 tanggal,
                 toko,
-                jumlah,
-                subtotal,
                 total,
                 tambahanBiaya,
                 id_subKategori,
+                barang,
                 isPengeluaran,
             } = pengeluaranData;
 
@@ -198,9 +197,8 @@ class pengeluaranService {
             if (!namaPengeluaran) missingFields.push("namaPengeluaran");
             if (!tanggal) missingFields.push("tanggal");
             if (!toko) missingFields.push("toko");
-            if (!jumlah) missingFields.push("jumlah");
-            if (!subtotal) missingFields.push("subtotal");
             if (!total) missingFields.push("total");
+            if (!barang) missingFields.push("barang");
             if (tambahanBiaya === undefined || tambahanBiaya === null || Number.isNaN(parseInt(tambahanBiaya))) {
                 missingFields.push("tambahanBiaya");
             }            
@@ -220,9 +218,8 @@ class pengeluaranService {
                     namaPengeluaran,
                     tanggal,
                     toko,
-                    jumlah,
-                    subtotal,
                     total,
+                    barang,
                     tambahanBiaya,
                     isPengeluaran,
                 },
