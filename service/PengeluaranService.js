@@ -201,7 +201,7 @@ class pengeluaranService {
             if (!tanggal) missingFields.push("tanggal");
             if (!toko) missingFields.push("toko");
             if (!total) missingFields.push("total");
-            if (!barang){missingFields.push("barang"), barang = []};
+            if (!barang) missingFields.push("barang");
             if (tambahanBiaya === undefined || tambahanBiaya === null || Number.isNaN(parseInt(tambahanBiaya))) {
                 missingFields.push("tambahanBiaya");
             }            
