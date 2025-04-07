@@ -44,7 +44,8 @@ class pemasukanRepository {
             throw new Error('Pemasukan not found');
         }
         await docRef.update({...pemasukan,userId});
-        return { id, ...pemasukan, userId };
+
+        return { id: docRef.id, ...pemasukan, userId };
     }
 
 

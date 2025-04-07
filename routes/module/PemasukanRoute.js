@@ -7,4 +7,5 @@ module.exports = (router) => {
     router.post("/pemasukanUser", verifyFirebaseToken, PemasukanService.addPemasukan);
     router.put("/pemasukanUser/update/:id", verifyFirebaseToken, PemasukanService.updatePemasukan);
     router.post('/pemasukan/delete', verifyFirebaseToken, PemasukanService.deletePemasukan);
+
 }

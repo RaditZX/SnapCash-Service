@@ -132,9 +132,11 @@ class pengeluaranService {
                     "Minimal satu field harus diisi untuk melakukan update.",
                     res
                 );
+
             }
     
             const userId = await auth.getUserAuthenticate(req.user);
+
     
             // Buat object field yang akan diupdate (hanya field yang tidak kosong/null)
             const updateData = {};
@@ -157,6 +159,7 @@ class pengeluaranService {
             sendResponse(500, req.body, "Error updating pengeluaran service: " + error.message, res);
         }
     };
+
   
      deletePengeluaran = async (req, res) => {
         try {
