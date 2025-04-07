@@ -50,14 +50,24 @@ class PengeluaranRepository {
   }
   
 
-    async deletePengeluaran(id) {
+    async deletePengeluaran(id, userId) {
       try {
-        await this.collection.doc(id).delete();
-        return { message: "Pengeluaran deleted successfully" };
+          const docRef = this.collection.doc(id);
+          const snapshot = await docRef.get();
+  
+          if (!snapshot.exists) return null;
+  
+          const data = snapshot.data();
+          if (data.userId !== userId) return null;
+  
+          await docRef.delete();
+          return { message: "Pengeluaran berhasil dihapus" };
       } catch (error) {
-        throw new Error("Error deleting pengeluaran: " + error.message);
+          throw new Error("Gagal menghapus pengeluaran: " + error.message);
       }
-    }
+  }
+  
+  
 }
 
 module.exports = new PengeluaranRepository();
