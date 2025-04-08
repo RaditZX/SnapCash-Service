@@ -36,6 +36,7 @@ class PemasukanRepository {
 
     async createPemasukan(pemasukan, userId) {
         const docRef = await this.collection.add({...pemasukan,userId});
+        docRef.update({ id: docRef.id });
         return { id: docRef.id, ...pemasukan, userId };
     }
 

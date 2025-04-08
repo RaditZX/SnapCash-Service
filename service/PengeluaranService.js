@@ -4,7 +4,7 @@ const {
 } = require("../response");
 const auth = require("./authService");
 
-class pengeluaranService {
+class PengeluaranService {
     constructor() {
         this.repository = pengeluaranRepository;
     }
@@ -194,7 +194,7 @@ class pengeluaranService {
             if (isPengeluaran !== undefined) updateData.isPengeluaran = isPengeluaran;
     
             // Update data pengeluaran
-            const updatedPengeluaran = await this.pengeluaranRepository.updatePengeluaran(id, updateData, userId);
+            const updatedPengeluaran = await this.repository.updatePengeluaran(id, updateData, userId);
     
             sendResponse(200, updatedPengeluaran, "Data successfully updated", res, true);
     
@@ -281,4 +281,4 @@ class pengeluaranService {
     };
 }
 
-module.exports = new pengeluaranService();
+module.exports = new PengeluaranService();
