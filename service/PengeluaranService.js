@@ -245,10 +245,11 @@ class pengeluaranService {
             if (!tanggal) missingFields.push("tanggal");
             if (!toko) missingFields.push("toko");
             if (!total) missingFields.push("total");
-            if (!barang)missingFields.push("barang");
+            if (!barang) missingFields.push("barang");
             if (!tambahanBiaya) {
                 missingFields.push("tambahanBiaya");
-            }
+            }        
+
             if (isPengeluaran === undefined || isPengeluaran === null)
                 missingFields.push("isPengeluaran");
 
