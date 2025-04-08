@@ -37,8 +37,45 @@ class PemasukanService{
             }
         }
 
-    async getPemasukanById(id){
-        return await this.pemasukanRepository.getPemasukanById(id);
+    getPemasukanById = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const userId = await auth.getUserAuthenticate(req.user);
+            const result = await this.pemasukanRepository.getPemasukanById(id, userId);
+            
+            if (result.userId !== userId) {
+                return sendResponse(
+                    403,
+                    req.body,
+                    "Unauthorized access to this pemasukan",
+                    res
+                );
+            }
+
+            if (!result) {
+                return sendResponse(
+                    404,
+                    req.body,
+                    "Pemasukan not found",
+                    res
+                );
+            }
+            sendResponse(
+                200,
+                result,
+                "Data successfully retrieved",
+                res,
+                true
+            );
+        } catch (error) {
+            console.error(error);
+            sendResponse(
+                500,
+                req.body,
+                "Error retrieving pemasukan: " + error.message,
+                res
+            );
+        }
     }
 
     addPemasukan = async (req,res) => {
@@ -96,9 +133,6 @@ class PemasukanService{
                 namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
             } = req.body;
             const { id } = req.params;
-    
-            console.log("Request body:", req.body);
-            console.log("ID:", id);
     
             // Cek minimal satu field diisi
             const isAnyFieldProvided = [
@@ -175,8 +209,6 @@ class PemasukanService{
                 namaPemasukan, tanggal, sumber, total, tambahanBiaya, id_subKategori, isPengeluaran
             } = pemasukanData;
 
-            console.log("Pemasukan Data:", pemasukanData);
-
             const missingFields = [];
             if (!namaPemasukan) missingFields.push("namaPemasukan");
             if (!tanggal) missingFields.push("tanggal");
@@ -194,8 +226,6 @@ class PemasukanService{
                 );
             }
     
-     
-        
             const userId = await auth.getUserAuthenticate(user);
         
             // Simpan data pengeluaran

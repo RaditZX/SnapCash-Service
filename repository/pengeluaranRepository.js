@@ -3,7 +3,7 @@ const admin = require("../firebase-service");
 class PengeluaranRepository {
     constructor() {
       this.db = admin.firestore(); // Inisialisasi Firestore
-      this.collection = this.db.collection("pengeluaran"); // Simpan koleksi sebagai property
+      this.collection = this.db.collection("Pengeluaran"); // Simpan koleksi sebagai property
     }
 
     async getAllPengeluaran(userId) {
@@ -32,12 +32,19 @@ class PengeluaranRepository {
 
     async addPengeluaran(pengeluaranData, userId) {
       try {
-        const docRef = await this.collection.add({ ...pengeluaranData, userId });
+        const docRef = await this.collection.add({
+          ...pengeluaranData,
+          userId
+        });
+        
+        await docRef.update({ id: docRef.id });
+    
         return { id: docRef.id, ...pengeluaranData, userId };
       } catch (error) {
         throw new Error("Error adding pengeluaran: " + error.message);
       }
     }
+    
 
     async updatePengeluaran(id, pengeluaranData, userId) {
       const docRef = this.collection.doc(id);
