@@ -90,6 +90,7 @@ class PengeluaranService {
                 toko,
                 total,
                 tambahanBiaya,
+                barang
             } = req.body;
 
             const missingFields = [];
@@ -98,6 +99,7 @@ class PengeluaranService {
             if (!toko) missingFields.push("toko");
             if (!total) missingFields.push("total");
             if (!tambahanBiaya) missingFields.push("tambahanBiaya");
+            if (!barang)missingFields.push("barang");
             if (missingFields.length > 0) {
                 sendResponse(
                     400,
@@ -119,6 +121,7 @@ class PengeluaranService {
                     total,
                     tambahanBiaya,
                     isPengeluaran,
+                    barang
                 },
                 userId
             );
