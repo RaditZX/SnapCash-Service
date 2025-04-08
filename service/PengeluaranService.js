@@ -88,8 +88,6 @@ class PengeluaranService {
                 namaPengeluaran,
                 tanggal,
                 toko,
-                jumlah,
-                subtotal,
                 total,
                 tambahanBiaya,
                 // id_subKategori,
@@ -100,8 +98,6 @@ class PengeluaranService {
             if (!namaPengeluaran) missingFields.push("namaPengeluaran");
             if (!tanggal) missingFields.push("tanggal");
             if (!toko) missingFields.push("toko");
-            if (!jumlah) missingFields.push("jumlah");
-            if (!subtotal) missingFields.push("subtotal");
             if (!total) missingFields.push("total");
             if (!tambahanBiaya) missingFields.push("tambahanBiaya");
             // if (!id_subKategori) missingFields.push("id_subKategori");

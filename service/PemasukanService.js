@@ -81,15 +81,13 @@ class PemasukanService{
     addPemasukan = async (req,res) => {
         try {
             const {
-                namaPemasukan, tanggal, sumber, jumlah, subtotal, total, tambahanBiaya, id_subKategori, isPengeluaran
+                namaPemasukan, tanggal, sumber, total, tambahanBiaya, id_subKategori, isPengeluaran
             } = req.body;
     
             const missingFields = [];
             if (!namaPemasukan) missingFields.push("nama pemasukan");
             if (!tanggal) missingFields.push("tanggal");
             if (!sumber) missingFields.push("sumber");
-            if (!jumlah) missingFields.push("jumlah");
-            if (!subtotal) missingFields.push("subtotal");
             if (!total) missingFields.push("total");
             if (!tambahanBiaya) missingFields.push("tambahanBiaya");
             if (isPengeluaran === undefined || isPengeluaran === null)
