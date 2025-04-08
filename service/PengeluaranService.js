@@ -90,8 +90,6 @@ class PengeluaranService {
                 toko,
                 total,
                 tambahanBiaya,
-                // id_subKategori,
-                isPengeluaran,
             } = req.body;
 
             const missingFields = [];
@@ -100,10 +98,6 @@ class PengeluaranService {
             if (!toko) missingFields.push("toko");
             if (!total) missingFields.push("total");
             if (!tambahanBiaya) missingFields.push("tambahanBiaya");
-            // if (!id_subKategori) missingFields.push("id_subKategori");
-            if (isPengeluaran === undefined || isPengeluaran === null)
-                missingFields.push("isPengeluaran");
-
             if (missingFields.length > 0) {
                 sendResponse(
                     400,
@@ -115,14 +109,13 @@ class PengeluaranService {
             }
 
             const userId = await auth.getUserAuthenticate(req.user);
+            const isPengeluaran = true;
 
             // Simpan data pengeluaran
             const newPengeluaran = await this.repository.addPengeluaran({
                     namaPengeluaran,
                     tanggal,
                     toko,
-                    jumlah,
-                    subtotal,
                     total,
                     tambahanBiaya,
                     isPengeluaran,
@@ -144,7 +137,7 @@ class PengeluaranService {
     updatePengeluaran = async (req, res) => {
         try {
             const {
-                namaPengeluaran, tanggal, toko, jumlah, subtotal, total,
+                namaPengeluaran, tanggal, toko, total,
                 tambahanBiaya, id_subKategori, isPengeluaran
             } = req.body;
             const { id } = req.params;
@@ -157,8 +150,6 @@ class PengeluaranService {
                 namaPengeluaran,
                 tanggal,
                 toko,
-                jumlah,
-                subtotal,
                 total,
                 tambahanBiaya,
                 isPengeluaran
@@ -182,8 +173,6 @@ class PengeluaranService {
             if (namaPengeluaran !== undefined) updateData.namaPengeluaran = namaPengeluaran;
             if (tanggal !== undefined) updateData.tanggal = tanggal;
             if (toko !== undefined) updateData.toko = toko;
-            if (jumlah !== undefined) updateData.jumlah = jumlah;
-            if (subtotal !== undefined) updateData.subtotal = subtotal;
             if (total !== undefined) updateData.total = total;
             if (tambahanBiaya !== undefined) updateData.tambahanBiaya = tambahanBiaya;
             if (id_subKategori !== undefined) updateData.id_subKategori = id_subKategori;
@@ -230,7 +219,6 @@ class PengeluaranService {
                 toko,
                 total,
                 tambahanBiaya,
-                id_subKategori,
                 barang,
                 isPengeluaran,
             } = pengeluaranData;
