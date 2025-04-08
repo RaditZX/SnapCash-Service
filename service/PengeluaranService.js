@@ -39,6 +39,49 @@ class pengeluaranService {
         }
     }
 
+    getPengeluaranById = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const userId = await auth.getUserAuthenticate(req.user);
+            const result = await this.repository.getPengeluaranById(id, userId);
+
+                        
+            if (result.userId !== userId) {
+                return sendResponse(
+                    403,
+                    req.body,
+                    "Unauthorized access to this pengeluaran",
+                    res
+                );
+            }
+
+            if (!result) {
+                return sendResponse(
+                    404,
+                    req.body,
+                    "Pengeluaran not found",
+                    res
+                );
+            }
+            sendResponse(
+                200,
+                result,
+                "Data successfully retrieved",
+                res,
+                true
+            );
+        } catch (error) {
+            console.error(error);
+            sendResponse(
+                500,
+                req.body,
+                "Error retrieving pengeluaran: " + error.message,
+                res
+            );
+        }
+    }
+
+
     addPengeluaran = async (req, res) => {
         try {
             const {
@@ -196,6 +239,7 @@ class pengeluaranService {
                 isPengeluaran,
             } = pengeluaranData;
 
+
             const missingFields = [];
             if (!namaPengeluaran) missingFields.push("namaPengeluaran");
             if (!tanggal) missingFields.push("tanggal");
@@ -205,6 +249,7 @@ class pengeluaranService {
             if (!tambahanBiaya) {
                 missingFields.push("tambahanBiaya");
             }        
+
             if (isPengeluaran === undefined || isPengeluaran === null)
                 missingFields.push("isPengeluaran");
 

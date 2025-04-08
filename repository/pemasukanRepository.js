@@ -2,7 +2,7 @@ const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
 
 
-class pemasukanRepository {
+class PemasukanRepository {
     constructor() {
         this.db = admin.firestore();
         this.collection = this.db.collection('Pemasukan');
@@ -20,17 +20,19 @@ class pemasukanRepository {
         }
       }
 
-    async getAllPengeluaran(userId) {
-      try {
-        const snapshot = await this.collection.where("userId", "==", userId).get();
-        if (snapshot.empty) {
-          return []; // Jika tidak ada data, kembalikan array kosong
+      async getPemasukanById(id) {
+        try {
+          const doc = await this.collection.doc(id).get();
+          if (!doc.exists) {
+            throw new Error("Pemasukan not found");
+          }
+          return doc.data();
+        } catch (error) {
+          throw new Error("Error fetching pemasukan by ID: " + error.message);
         }
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      } catch (error) {
-        throw new Error("Error fetching pengeluaran: " + error.message);
       }
-    }
+  
+
 
     async createPemasukan(pemasukan, userId) {
         const docRef = await this.collection.add({...pemasukan,userId});
@@ -68,4 +70,4 @@ class pemasukanRepository {
 
 }
 
-module.exports = new pemasukanRepository();
+module.exports = new PemasukanRepository();
