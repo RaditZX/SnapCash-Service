@@ -194,7 +194,7 @@ class PengeluaranService {
   
      deletePengeluaran = async (req, res) => {
         try {
-            const { id } = req.body;
+            const { id } = req.params;
     
             if (!id) {
                 return sendResponse(400, req.body, "Missing document ID", res);
