@@ -199,6 +199,7 @@ class PengeluaranService {
             if (!id) {
                 return sendResponse(400, req.body, "Missing document ID", res);
             }
+            const userId = await auth.getUserAuthenticate(req.user);
             const deletedPengeluaran = await this.repository.deletePengeluaran(id, userId);
     
             if (!deletedPengeluaran) {
