@@ -178,7 +178,7 @@ class PemasukanService{
 
     deletePemasukan = async(req,res) =>{
         try {
-            const { id } = req.body;
+            const { id } = req.params;
 
             if (!id) {
                 sendResponse(400, req.body, "Missing document ID", res);
