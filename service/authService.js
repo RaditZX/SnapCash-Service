@@ -94,14 +94,14 @@ class AuthService {
 
     try {
       if (!email || !password) {
-        return sendResponse(400, req.body, "Email and password are required", res);
+        return sendResponse(400, req.body, "Email and password are required", res, false);
       }
 
       const isEmailVerified = await getUserVerificationStatusByEmail(email);
 
       if (isEmailVerified) {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        sendResponse(200, { userCredential }, "Login Successful", res);
+        sendResponse(200, { userCredential }, "Login Successful", res, true);
       } else {
         await sendEmailVerificationLink();
         sendResponse(
