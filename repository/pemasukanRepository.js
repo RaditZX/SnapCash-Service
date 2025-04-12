@@ -26,7 +26,7 @@ class PemasukanRepository {
           if (!doc.exists) {
             throw new Error("Pemasukan not found");
           }
-          return doc.data();
+          return doc.data();  
         } catch (error) {
           throw new Error("Error fetching pemasukan by ID: " + error.message);
         }
