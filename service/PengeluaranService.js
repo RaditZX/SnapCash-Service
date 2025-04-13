@@ -140,7 +140,7 @@ class PengeluaranService {
     updatePengeluaran = async (req, res) => {
         try {
             const {
-                namaPengeluaran, tanggal, toko, total,
+                namaPengeluaran, tanggal, toko, total, barang,
                 tambahanBiaya, id_subKategori, isPengeluaran
             } = req.body;
             const { id } = req.params;
@@ -154,6 +154,7 @@ class PengeluaranService {
                 tanggal,
                 toko,
                 total,
+                barang,
                 tambahanBiaya,
                 isPengeluaran
             ].some(field => field !== undefined && field !== null && field !== '');
@@ -180,6 +181,7 @@ class PengeluaranService {
             if (tambahanBiaya !== undefined) updateData.tambahanBiaya = tambahanBiaya;
             if (id_subKategori !== undefined) updateData.id_subKategori = id_subKategori;
             if (isPengeluaran !== undefined) updateData.isPengeluaran = isPengeluaran;
+            if (barang !== undefined) updateData.barang = barang;
     
             // Update data pengeluaran
             const updatedPengeluaran = await this.repository.updatePengeluaran(id, updateData, userId);
