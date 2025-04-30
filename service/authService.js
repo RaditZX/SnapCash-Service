@@ -1,17 +1,10 @@
+const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } = require("firebase/auth");
 const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
-const {
-  getAuth,
-  getIdToken,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  sendEmailVerification,
-} = require("firebase/auth");
-const auth = getAuth(firebase);
-const { sendResponse } = require("../response");
+const userEntity = require("../Entity/UserEntity");
 const authRepository = require("../repository/authRepository");
 
+const auth = getAuth(firebase);
 
 // Fetch user verification status by email
 const getUserVerificationStatusByEmail = async (email) => {
@@ -37,13 +30,8 @@ const sendEmailVerificationLink = async (email) => {
 };
 
 class AuthService {
-  constructor() {
-    this.auth = getAuth(firebase);
-    this.repository = authRepository;
-  }
-
   getUserAuthenticate = async (user) => {
-    try{
+    try {
       const userId = user.uid;
         
       if (!userId) {
@@ -51,122 +39,126 @@ class AuthService {
       }
 
       return userId;
-    }catch (error) {
+    } catch (error) {
       console.error(error);
       throw new Error("User not authenticated", error);
-      };
     }
-
-  signUp = async (req, res) => {
-    const { email, password } = req.body;
-
+  };
+  
+  async signUp(email, password, username, photo) {
     try {
-      if (!email || !password) {
-        return sendResponse(400, req.body, "Email and password are required", res);
+      if (!email || !password || !username) {
+        throw new Error("Email, password, and username are required");
       }
 
       const user = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerificationLink(email);
 
-      this.repository.createUser({userId: user.user.uid, email});
+      const userEntityInstance = new userEntity({
+        userId: user.user.uid,
+        email,
+        username,
+        foto: photo
+      });
 
-      sendResponse(
-        202,
-        req.body,
-        "Verification email sent. Please verify your email before logging in.",
-        res,
-        true
-      );
+      await authRepository.createUser(userEntityInstance);
+
+      return {
+        status: 202,
+        message: "Verification email sent. Please verify your email before logging in."
+      };
     } catch (error) {
       console.error(error);
-      const errorMessages = {
-        "auth/email-already-in-use": "Email already exists",
-        "auth/invalid-email": "Invalid email address",
-        "auth/weak-password": "Password should be at least 6 characters",
-      };
-      const errorMessage = errorMessages[error.code] || error.message || "Sign up failed";
-      sendResponse(400, req.body, errorMessage, res, false);
+      throw error;
     }
-  };
+  }
 
-  signIn = async (req, res) => {
-    const { email, password } = req.body;
-
+  async signIn(email, password) {
     try {
       if (!email || !password) {
-        return sendResponse(400, req.body, "Email and password are required", res, false);
+        throw new Error("Email and password are required");
       }
 
       const isEmailVerified = await getUserVerificationStatusByEmail(email);
 
       if (isEmailVerified) {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        sendResponse(200, { userCredential }, "Login Successful", res, true);
+        return {
+          status: 200,
+          data: { userCredential },
+          message: "Login Successful"
+        };
       } else {
         await sendEmailVerificationLink();
-        sendResponse(
-          403,
-          null,
-          "Please verify your email before logging in. We have resent the verification email.",
-          res,
-          true
-        );
+        return {
+          status: 403,
+          message: "Please verify your email before logging in. We have resent the verification email."
+        };
       }
     } catch (error) {
       console.error(error);
-      const errorMessage =
-        error.code === "auth/user-not-found" || error.code === "auth/invalid-credential"
-          ? "Incorrect email or password"
-          : "Login failed";
-      sendResponse(500, error, errorMessage, res, false);
+      throw error;
     }
-  };
+  }
 
-  signInWithGoogle = async (req, res) => {
+  async signInWithGoogle(user) {
     try {
-      const { user } = req;
-
-      sendResponse(200, { user }, "Login Successful", res, true);
+      const isUserExist = await authRepository.getUserByEmail(user.email);
+      if (!isUserExist) {
+        return{
+          status: 404,
+          message: "Akun Tidak Terdeteksi, silahkan "
+        }
+      }
+      return {
+        status: 200,
+        data: { user },
+        message: "Login Successful"
+      };
     } catch (error) {
       console.error(error);
-      sendResponse(500, error, "Login failed", res, false);
+      throw new Error("Login failed");
     }
-  };
+  }
 
-  registerWithGoogle = async (req, res) => {
+  async registerWithGoogle(user) {
     try {
-      const { user } = req; // Extract userCredential from middleware token
-
-      // Check if the user already exists in Firestore
-      const existingUser = await this.repository.getUserByEmail(user.email);
+      const existingUser = await authRepository.getUserByEmail(user.email);
       if (!existingUser) {
-        // If not, create a new user in Firestore
-        await this.repository.createUser({ userId: user.uid, email: user.email });
+        const userEntityInstance = new userEntity({
+          userId: user.uid,
+          email: user.email,
+        });
+        
+        await authRepository.createUser(userEntityInstance);
       }
 
-      sendResponse(200, { user }, "Registration successful", res, true);
+      return {
+        status: 200,
+        data: { user },
+        message: "Registration successful"
+      };
     } catch (error) {
       console.error(error);
-      sendResponse(500, error, "Registration failed", res, false);
+      throw new Error("Registration failed");
     }
-  };
+  }
 
-
-  signOut = async (req, res) => {
+  async signOut() {
     try {
       const user = auth.currentUser;
 
       if (user) {
         await signOut(auth);
-        sendResponse(200, null, "Sign out successfully", res, true);
+        return { status: 200, message: "Sign out successfully" };
       } else {
-        sendResponse(401, null, "User is not authenticated", res, false);
+        throw new Error("User is not authenticated");
       }
     } catch (error) {
       console.error(error);
-      sendResponse(500, null, "Sign out failed", res, false);
+      throw new Error("Sign out failed");
     }
-  };
+  }
 }
 
 module.exports = new AuthService();

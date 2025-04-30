@@ -1,274 +1,57 @@
-const pengeluaranRepository = require("../repository/pengeluaranRepository");
-const {
-    sendResponse
-} = require("../response");
+const PengeluaranRepository = require("../repository/pengeluaranRepository");
+const PengeluaranEntity = require("../Entity/PengeluaranEntity");
 const auth = require("./authService");
 
 class PengeluaranService {
     constructor() {
-        this.repository = pengeluaranRepository;
+        this.repository = PengeluaranRepository;
     }
 
-    getPengeluaran = async (req, res) => {
-        try {
-            const userId = await auth.getUserAuthenticate(req.user);
-            const result = await this.repository.getAllPengeluaran(userId);
-            if (!result) {
-                return sendResponse(
-                    404,
-                    req.body,
-                    "Pengeluaran not found",
-                    res
-                );
-            }
-            sendResponse(
-                200,
-                result,
-                "Data successfully retrieved",
-                res,
-                true
-            );
-        } catch (error) {
-            console.error(error);
-            sendResponse(
-                500,
-                req.body,
-                "Error retrieving pengeluaran: " + error.message,
-                res
-            );
-        }
+    async getPengeluaran(userId) {
+        return await this.repository.getAllPengeluaran(userId);
     }
 
-    getPengeluaranById = async (req, res) => {
-        try {
-            const { id } = req.params;
-            const userId = await auth.getUserAuthenticate(req.user);
-            const result = await this.repository.getPengeluaranById(id, userId);
-
-                        
-            if (result.userId !== userId) {
-                return sendResponse(
-                    403,
-                    req.body,
-                    "Unauthorized access to this pengeluaran",
-                    res
-                );
-            }
-
-            if (!result) {
-                return sendResponse(
-                    404,
-                    req.body,
-                    "Pengeluaran not found",
-                    res
-                );
-            }
-            sendResponse(
-                200,
-                result,
-                "Data successfully retrieved",
-                res,
-                true
-            );
-        } catch (error) {
-            console.error(error);
-            sendResponse(
-                500,
-                req.body,
-                "Error retrieving pengeluaran: " + error.message,
-                res
-            );
+    async getPengeluaranById(id, userId) {
+        const result = await this.repository.getPengeluaranById(id, userId);
+        if (!result) {
+            throw new Error("Pengeluaran not found");
         }
+        if (result.userId !== userId) {
+            throw new Error("Unauthorized access to this pengeluaran");
+        }
+        return result;
     }
 
-
-    addPengeluaran = async (req, res) => {
-        try {
-            const {
-                namaPengeluaran,
-                tanggal,
-                toko,
-                total,
-                tambahanBiaya,
-                barang
-            } = req.body;
-
-            const missingFields = [];
-            if (!namaPengeluaran) missingFields.push("namaPengeluaran");
-            if (!tanggal) missingFields.push("tanggal");
-            if (!toko) missingFields.push("toko");
-            if (!total) missingFields.push("total");
-            if (!tambahanBiaya) missingFields.push("tambahanBiaya");
-            if (!barang)missingFields.push("barang");
-            if (missingFields.length > 0) {
-                sendResponse(
-                    400,
-                    req.body,
-                    `All fields are required. Missing: ${missingFields.join(", ")}`,
-                    res
-                );
-                return;
-            }
-
-            const userId = await auth.getUserAuthenticate(req.user);
-            const isPengeluaran = true;
-
-            // Simpan data pengeluaran
-            const newPengeluaran = await this.repository.addPengeluaran({
-                    namaPengeluaran,
-                    tanggal,
-                    toko,
-                    total,
-                    tambahanBiaya,
-                    isPengeluaran,
-                    barang
-                },
-                userId
-            );
-
-            sendResponse(200, newPengeluaran, "Data successfully added", res, true);
-        } catch (error) {
-            sendResponse(
-                500,
-                req.body,
-                "Error adding pengeluaran service: " + error.message,
-                res
-            );
+    async addPengeluaran(pengeluaranData, userId) {
+        const pengeluaran = new PengeluaranEntity(pengeluaranData)
+        const missingFields = pengeluaran.validateFields();
+        if (missingFields.length > 0) {
+            throw new Error(`All fields are required. Missing: ${missingFields.join(", ")}`);
         }
-    };
+        return await this.repository.addPengeluaran(pengeluaran.getFilledFields(), userId);
+    }
 
-    updatePengeluaran = async (req, res) => {
-        try {
-            const {
-                namaPengeluaran, tanggal, toko, total, barang,
-                tambahanBiaya, id_subKategori, isPengeluaran
-            } = req.body;
-            const { id } = req.params;
-    
-            console.log("Request body:", req.body);
-            console.log("ID:", id);
-    
-            // Cek minimal satu field diisi
-            const isAnyFieldProvided = [
-                namaPengeluaran,
-                tanggal,
-                toko,
-                total,
-                barang,
-                tambahanBiaya,
-                isPengeluaran
-            ].some(field => field !== undefined && field !== null && field !== '');
-    
-            if (!isAnyFieldProvided) {
-                return sendResponse(
-                    400,
-                    req.body,
-                    "Minimal satu field harus diisi untuk melakukan update.",
-                    res
-                );
-
-            }
-    
-            const userId = await auth.getUserAuthenticate(req.user);
-
-    
-            // Buat object field yang akan diupdate (hanya field yang tidak kosong/null)
-            const updateData = {};
-            if (namaPengeluaran !== undefined) updateData.namaPengeluaran = namaPengeluaran;
-            if (tanggal !== undefined) updateData.tanggal = tanggal;
-            if (toko !== undefined) updateData.toko = toko;
-            if (total !== undefined) updateData.total = total;
-            if (tambahanBiaya !== undefined) updateData.tambahanBiaya = tambahanBiaya;
-            if (id_subKategori !== undefined) updateData.id_subKategori = id_subKategori;
-            if (isPengeluaran !== undefined) updateData.isPengeluaran = isPengeluaran;
-            if (barang !== undefined) updateData.barang = barang;
-    
-            // Update data pengeluaran
-            const updatedPengeluaran = await this.repository.updatePengeluaran(id, updateData, userId);
-    
-            sendResponse(200, updatedPengeluaran, "Data successfully updated", res, true);
-    
-        } catch (error) {
-            sendResponse(500, req.body, "Error updating pengeluaran service: " + error.message, res);
+    async updatePengeluaran(id, pengeluaranData, userId) {
+        const pengeluaran = new PengeluaranEntity(pengeluaranData)
+        if (!pengeluaran.hasAnyValue()) {
+            throw new Error("Minimal satu field harus diisi untuk melakukan update.");
         }
-    };
+        return await this.repository.updatePengeluaran(id, pengeluaran.getFilledFields(), userId);
+    }
 
-  
-     deletePengeluaran = async (req, res) => {
-        try {
-            const { id } = req.params;
-    
-            if (!id) {
-                return sendResponse(400, req.body, "Missing document ID", res);
-            }
-            const userId = await auth.getUserAuthenticate(req.user);
-            const deletedPengeluaran = await this.repository.deletePengeluaran(id, userId);
-    
-            if (!deletedPengeluaran) {
-                return sendResponse(404, req.body, "Pengeluaran tidak ditemukan atau tidak diizinkan", res);
-            }
-    
-           
-            sendResponse(200, deletedPengeluaran, "Pengeluaran berhasil dihapus", res, true);
-        } catch (error) {
-            console.error(error);
-            sendResponse(500, req.body, "Gagal menghapus pengeluaran: " + error.message, res);
+    async deletePengeluaran(id, userId) {
+        return await this.repository.deletePengeluaran(id, userId);
+    }
+
+    async addPengeluaranByGPT(pengeluaranData, user) {
+        const pengeluaran = new PengeluaranEntity(pengeluaranData);
+        const missingFields = pengeluaran.validateFields();
+        if (missingFields.length > 0) {
+            throw new Error(`All fields are required. Missing: ${missingFields.join(", ")}`);
         }
-    };
-    
-
-    addPengeluaranByGPT = async (pengeluaranData, user) => {
-        try {
-            const {
-                namaPengeluaran,
-                tanggal,
-                toko,
-                total,
-                tambahanBiaya,
-                barang,
-                isPengeluaran,
-            } = pengeluaranData;
-
-
-            const missingFields = [];
-            if (!namaPengeluaran) missingFields.push("namaPengeluaran");
-            if (!tanggal) missingFields.push("tanggal");
-            if (!toko) missingFields.push("toko");
-            if (!total) missingFields.push("total");
-            if (!barang) missingFields.push("barang");
-            if (!tambahanBiaya) {
-                missingFields.push("tambahanBiaya");
-            }        
-
-            if (isPengeluaran === undefined || isPengeluaran === null)
-                missingFields.push("isPengeluaran");
-
-            if (missingFields.length > 0) {
-                throw new Error(
-                    `All fields are required. Missing: ${missingFields.join(", ")}`
-                );
-            }
-
-            const userId = await auth.getUserAuthenticate(user);
-
-            // Simpan data pengeluaran
-            const newPengeluaran = await this.repository.addPengeluaran({
-                    namaPengeluaran,
-                    tanggal,
-                    toko,
-                    total,
-                    barang,
-                    tambahanBiaya,
-                    isPengeluaran,
-                },
-                userId
-            );
-
-            return newPengeluaran;
-        } catch (error) {
-            throw new Error("Error adding pengeluaran service: " + error.message);
-        }
-    };
+        const userId = await auth.getUserAuthenticate(user);
+        return await this.repository.addPengeluaran(pengeluaran.getFilledFields(), userId);
+    }
 }
 
 module.exports = new PengeluaranService();
