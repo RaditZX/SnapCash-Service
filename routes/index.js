@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { gptService, upload } = require('../service/gptService');
 const verifyFirebaseToken = require('../middleware/firebaseMiddleware');
-
+const DashboardService = require('../service/DashboardService');
 const gpt = new gptService();
 
 /* GET home page. */
@@ -15,6 +15,11 @@ router.post(
     verifyFirebaseToken,
     gpt.postDataPengeluaranOrPemasukanUsingGPT
   );
+
+router.get('/getDashboardAnalytics', verifyFirebaseToken, DashboardService.getDashboardData);
+router.get('/', (req, res) => {
+    res.send('Hello From SnapCash!');
+});
   
 
 module.exports = router;

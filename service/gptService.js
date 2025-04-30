@@ -1,9 +1,9 @@
 const { default: axios } = require("axios");
 const multer = require('multer');
 const {firebaseService} = require('./firebaseService');
-const {addPengeluaranByGPT } = require("../service/PengeluaranService");
+const pengeluaranService = require("./PengeluaranService");
 const { sendResponse } = require("../response");
-const { addPemasukanByGPT } = require("./PemasukanService");
+const pemasukanService = require("./PemasukanService");
 const firebase = new firebaseService();
 const upload = multer({ storage: multer.memoryStorage() });
 const sharp = require("sharp");
@@ -63,7 +63,7 @@ class gptService{
                                 },
                                 {
                                     type: "text",
-                                    text:"Dapatkan data dari struk berupa namaPengeluaran, tanggal, toko, total, dan tambahanBiaya berisi namaBiaya dan jumlah yang dibungkus dalam array. Tentukan apakah transaksi dalam struk tersebut merupakan pengeluaran atau pemasukan dengan menambahkan atribut isPengeluaran bertipe boolean. Jika isPengeluaran bernilai false (pemasukan), ubah atribut namaPengeluaran menjadi namaPemasukan dan atribut toko menjadi sumber. Jika struk menunjukkan aktivitas bank, gunakan nama bank tersebut sebagai nilai dari toko atau sumber, tergantung jenis transaksinya. Format tanggal harus diubah menjadi bentuk yang lengkap seperti “21 Maret 2025, 12:12:52 WIB”. Jika isPengeluaran bernilai true (pengeluaran), tambahkan atribut barang yang merupakan objek berisi daftar barang yang dibeli. Setiap item dalam daftar ini harus mencakup namaBarang, jumlah, harga (>0), dan kategori (seperti makanan, fashion, elektronik, dan sebagainya). Susun hasilnya berdasarkan tambahanBiaya secara berurutan berikan dalam format JSON berdasarkan tambahan biayanya.  hanya JSON saja tanpa karakter escape atau \\n yang dibungkus dalam array."
+                                    text:"Dapatkan data dari struk berupa namaPengeluaran, tanggal, toko, total, kategori seperti (gaji, transportasi, makanan&minuman, Belanja) , dan tambahanBiaya berisi namaBiaya dan jumlah yang dibungkus dalam array. Tentukan apakah transaksi dalam struk tersebut merupakan pengeluaran atau pemasukan dengan menambahkan atribut isPengeluaran bertipe boolean. Jika isPengeluaran bernilai false (pemasukan), ubah atribut namaPengeluaran menjadi namaPemasukan dan atribut toko menjadi sumber. Jika struk menunjukkan aktivitas bank, gunakan nama bank tersebut sebagai nilai dari toko atau sumber, tergantung jenis transaksinya. Format tanggal harus diubah menjadi bentuk yang lengkap seperti “21 Maret 2025, 12:12:52 WIB”. Jika isPengeluaran bernilai true (pengeluaran), tambahkan atribut barang yang merupakan objek berisi daftar barang yang dibeli. Setiap item dalam daftar ini harus mencakup namaBarang, jumlah, harga (>0). Susun hasilnya berdasarkan tambahanBiaya secara berurutan berikan dalam format JSON berdasarkan tambahan biayanya.  hanya JSON saja tanpa karakter escape atau \\n yang dibungkus dalam array."
                                 }
                             ]
                         }
@@ -103,9 +103,9 @@ class gptService{
         
     async saveTransaction(transactionType, invoiceData, user) {
         if (transactionType === "pemasukan") {
-            return await addPemasukanByGPT(invoiceData, user);
+            return await pemasukanService.addPemasukanByGPT(invoiceData, user);
         } else if (transactionType === "pengeluaran") {
-            return await addPengeluaranByGPT(invoiceData, user);
+            return await pengeluaranService.addPengeluaranByGPT(invoiceData, user);
         } else {
             throw new Error("Invalid transaction type");
         }

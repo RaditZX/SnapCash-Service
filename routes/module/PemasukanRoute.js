@@ -1,12 +1,12 @@
 const verifyFirebaseToken = require('../../middleware/firebaseMiddleware');
-const PemasukanService = require('../../service/PemasukanService');
+const PemasukanController = require('../../Controller/pemasukanController');
 
 module.exports = (router) => {
     // Sign up a new user
-    router.get("/pemasukanUser", verifyFirebaseToken, PemasukanService.getPemasukanUser); 
-    router.post("/pemasukanUser", verifyFirebaseToken, PemasukanService.addPemasukan);
-    router.get("/pemasukanUser/:id", verifyFirebaseToken, PemasukanService.getPemasukanById);
-    router.put("/pemasukanUser/update/:id", verifyFirebaseToken, PemasukanService.updatePemasukan);
-    router.post('/pemasukan/delete', verifyFirebaseToken, PemasukanService.deletePemasukan);
+    router.get("/pemasukanUser", verifyFirebaseToken, PemasukanController.getPemasukanUser); 
+    router.post("/pemasukanUser", verifyFirebaseToken, PemasukanController.addPemasukan);
+    router.get("/pemasukanUser/:id", verifyFirebaseToken, PemasukanController.getPemasukanById);
+    router.put("/pemasukanUser/update/:id", verifyFirebaseToken, PemasukanController.updatePemasukan);
+    router.delete('/pemasukan/delete/:id', verifyFirebaseToken, PemasukanController.deletePemasukan);
 
 }
