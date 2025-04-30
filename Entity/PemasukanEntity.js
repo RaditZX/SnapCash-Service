@@ -1,11 +1,12 @@
 class PemasukanEntity {
-    constructor({ namaPemasukan, tanggal, sumber, total, tambahanBiaya, isPengeluaran }) {
+    constructor({ namaPemasukan, tanggal, sumber, total, tambahanBiaya, isPengeluaran, kategori }) {
         this.namaPemasukan = namaPemasukan;
         this.tanggal = tanggal;
         this.sumber = sumber;
         this.total = total;
         this.tambahanBiaya = tambahanBiaya;
         this.isPengeluaran = isPengeluaran ?? false;
+        this.kategori = kategori;
     }
 
     validateFields() {
@@ -16,6 +17,9 @@ class PemasukanEntity {
         if (this.total === undefined || this.total === null) missing.push("total");
         if (this.isPengeluaran === undefined || this.isPengeluaran === null) {
             missing.push("isPengeluaran");
+        }
+        if (this.kategori === undefined || this.kategori === null) {
+            missing.push("kategori");
         }
         return missing;
     }
