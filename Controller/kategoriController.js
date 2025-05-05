@@ -39,6 +39,7 @@ class KategoriController {
 
             sendResponse(200, result, "Category successfully added", res, true);
         } catch (error) {
+            console.error(error);
             sendResponse(500, req.body, "Error adding category: " + error.message, res);
         }
     }
@@ -51,6 +52,7 @@ class KategoriController {
 
             sendResponse(200, result, "Category successfully updated", res, true);
         } catch (error) {
+            console.error(error);
             sendResponse(500, req.body, "Error updating category: " + error.message, res);
         }
     }
