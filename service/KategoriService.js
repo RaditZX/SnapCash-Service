@@ -1,4 +1,5 @@
 const KategoriRepository = require("../repository/KategoriRepository");
+const KategoriEntity = require("../Entity/KategoriEntity");
 
 class KategoriService {
   constructor() {
@@ -18,17 +19,28 @@ class KategoriService {
   }
 
   async addKategori(kategoriData, userId) {
-    if (!kategoriData.nama || kategoriData.nama.trim() === "") {
-      throw new Error("Nama kategori wajib diisi");
+    console.log("Service received kategoriData:", kategoriData); // Debug log
+    const kategori = new KategoriEntity({
+      namaKategori: kategoriData.namaKategori,
+      isPengeluaran: kategoriData.isPengeluaran
+    });
+    const missingFields = kategori.validateFields();
+    if (missingFields.length > 0) {
+      throw new Error(`All fields are required. Missing: ${missingFields.join(", ")}`);
     }
-    return await this.repository.addKategori(kategoriData, userId);
+    console.log("Filled fields:", kategori.getFilledFields()); // Debug log
+    return await this.repository.addKategori(kategori.getFilledFields(), userId);
   }
 
   async updateKategori(id, kategoriData, userId) {
-    if (!kategoriData.nama || kategoriData.nama.trim() === "") {
-      throw new Error("Nama kategori wajib diisi");
+    const kategori = new KategoriEntity({
+      namaKategori: kategoriData.namaKategori,
+      isPengeluaran: kategoriData.isPengeluaran
+    });
+    if (!kategori.hasAnyValue()) {
+      throw new Error("Minimal satu field harus diisi untuk melakukan update.");
     }
-    return await this.repository.updateKategori(id, kategoriData, userId);
+    return await this.repository.updateKategori(id, kategori.getFilledFields(), userId);
   }
 
   async deleteKategori(id, userId) {
