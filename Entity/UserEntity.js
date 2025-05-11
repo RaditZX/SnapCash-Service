@@ -1,9 +1,11 @@
 class UserEntity {
-    constructor({ userId, email, username, foto }) {
+    constructor({ userId, email, username, foto, currencyChoice, no_hp, }) {
         this.userId = userId;
         this.email = email;
         this.username = username;
         this.foto = foto;
+        this.currencyChoice = currencyChoice;
+        this.no_hp = no_hp;
     }
 
     // Fungsi untuk validasi field yang harus ada
@@ -31,3 +33,5 @@ class UserEntity {
         return Object.values(this).some(value => value !== undefined && value !== null && value !== '');
     }
 }
+
+module.exports = UserEntity;

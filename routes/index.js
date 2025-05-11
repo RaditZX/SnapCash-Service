@@ -8,8 +8,9 @@ const gpt = new gptService();
 /* GET home page. */
 require('./module/AuthRoute')(router);
 require('./module/PengeluaranRoute')(router);
-require('./module/KategoriRoute')(router);
+// require('./module/KategoriRoute')(router);
 require('./module/PemasukanRoute')(router);
+require('./module/CurrencyRoute')(router);
 router.post(
     '/generateInvoiceData',
     upload.single('image'),
