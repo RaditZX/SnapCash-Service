@@ -6,7 +6,17 @@ class PemasukanController {
   async getPemasukanUser(req, res) {
     try {
       const userId = await auth.getUserAuthenticate(req.user);
-      const result = await pemasukanService.getPemasukanUser(userId);
+      const search = req.query.search ?? null;
+      const kategori = req.query.kategori ?? null;
+      const startDate = req.query.startDate ?? null;     
+      const endDate = req.query.endDate ?? null; 
+      const nominalMin = req.query.nominalMin ?? null;
+      let nominalMax = req.query.nominalMax ?? null;
+      if ( nominalMax == 0 ){
+        nominalMax = null;
+      }
+
+      const result = await pemasukanService.getPemasukanUser(userId, search, kategori, startDate, endDate, nominalMin, nominalMax);
       if (!result) {
         return sendResponse(404, req.body, "Pemasukan not found", res);
       }

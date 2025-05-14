@@ -7,20 +7,54 @@ class PemasukanRepository {
     this.collection = this.db.collection("Pemasukan");
   }
 
-  async getAllPemasukan(userId) {
+  async getAllPemasukan(userId, search, kategori, startDate, endDate, nominalMin, nominalMax) {
     try {
-      const snapshot = await this.collection
-        .where("userId", "==", userId)
-        .get();
-      if (snapshot.empty) {
-        return []; // Jika tidak ada data, kembalikan array kosong
+    
+      let query = this.collection.where("userId", "==", userId);
+
+      if (search) {
+        query = query.where("namaPemasukan", ">=", search)
+                     .where("namaPemasukan", "<=", search + '\uf8ff'); 
       }
+  
+      if (kategori) {
+        query = query.where("kategori", "==", kategori);
+      }
+  
+      // Validasi filter tanggal (Firestore tidak izinkan null)
+      if (startDate && endDate) {
+        query = query.where("tanggal", ">=", startDate)
+                     .where("tanggal", "<=", endDate);
+      } else if (startDate) {
+        query = query.where("tanggal", ">=", startDate);
+      } else if (endDate) {
+        query = query.where("tanggal", "<=", endDate);
+      }
+
+      if (nominalMin != null && nominalMax != null) {
+        query = query.where("total", ">=", nominalMin)
+                     .where("total", "<=", nominalMax)
+      } else if (nominalMin != null) {
+        console.log("nominalMin", nominalMin);
+          query = query.where("total", ">=", nominalMin)
+      } else if (nominalMax != null) {
+        console.log("nominalMax", nominalMax);
+          query = query.where("total", "<=", nominalMax)
+      }
+      
+  
+      const snapshot = await query.get();
+  
+      if (snapshot.empty) {
+        return [];
+      }
+
       return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-      throw new Error("Error fetching pengeluaran: " + error.message);
+      throw new Error("Error fetching pemasukan: " + error.message);
     }
   }
-
+  
   async getPemasukanById(id) {
     try {
       const doc = await this.collection.doc(id).get();

@@ -123,27 +123,41 @@ class AuthService {
 
   async registerWithGoogle(user) {
     try {
+      // Ensure that user.email is present
+      if (!user || !user.email || !user.uid) {
+        throw new Error("User email or uid is missing");
+      }
+  
       const existingUser = await authRepository.getUserByEmail(user.email);
+      
+      // Check if the user already exists
       if (!existingUser) {
         const userEntityInstance = new userEntity({
           userId: user.uid,
           email: user.email,
         });
-        
+  
         await authRepository.createUser(userEntityInstance);
       }
-
+  
+      // Return successful response
       return {
         status: 200,
         data: { user },
         message: "Registration successful"
       };
+      
     } catch (error) {
-      console.error(error);
-      throw new Error("Registration failed");
+      console.error("Registration failed:", error); // Improved error logging
+  
+      // Provide specific error message and return status 500
+      return {
+        status: 500,
+        message: `Registration failed: ${error.message || error}`
+      };
     }
   }
-
+  
   async signOut() {
     try {
       const user = auth.currentUser;
@@ -158,6 +172,42 @@ class AuthService {
       console.error(error);
       throw new Error("Sign out failed");
     }
+  }
+
+
+  async updateProfile(userId, email, username, photo, currencyChoice, no_hp) {
+    try {
+      const user = await authRepository.getUserById(userId);
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const updatedUser = new userEntity({
+        userId,
+        email,
+        username,
+        foto: photo,
+        currencyChoice,
+        no_hp
+      });
+
+      const missingFields = updatedUser.validateFields();
+      if (missingFields.length > 0) {
+        throw new Error(`Missing fields: ${missingFields.join(", ")}`);
+      }
+
+      const filledFields = updatedUser.getFilledFields();
+      if (!updatedUser.hasAnyValue()) {
+        throw new Error("No fields to update");
+      }
+
+      await authRepository.updateUser(userId, filledFields);
+      return { status: 200, message: "Profile updated successfully" };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    } 
   }
 }
 

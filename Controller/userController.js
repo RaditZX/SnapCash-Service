@@ -57,6 +57,21 @@ class AuthController {
       sendResponse(500, null, error.message, res, false);
     }
   }
+
+  async updateProfile(req, res) {
+    const { userId } = req.params;
+    const { email, username, photo, currencyChoice, no_hp } = req.body;
+
+    try {
+      const result = await authService.updateProfile(userId, email, username, photo, currencyChoice, no_hp);
+      sendResponse(result.status, result.data, result.message, res, true);
+    } catch (error) {
+      console.error(error);
+      sendResponse(400, req.body, error.message, res, false);
+    }
+  }
+
+
 }
 
 module.exports = new AuthController();
