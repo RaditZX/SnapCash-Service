@@ -1,3 +1,4 @@
+const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
 
 class KategoriRepository {
@@ -5,69 +6,121 @@ class KategoriRepository {
     this.db = admin.firestore();
     this.collection = this.db.collection("Kategori");
   }
-  
-  async getAllKategori(userId) {
+
+  async getAllCategories(userId, search, isPengeluaran) {
     try {
-      const snapshot = await this.collection
-        .where("userId", "==", userId)
-        .get();
-      if (snapshot.empty) {
-        return []; // Jika tidak ada data, kembalikan array kosong
+      let query = this.collection.where("userId", "==", userId);
+
+      if (search) {
+        query = query.where("nama", ">=", search)
+                     .where("nama", "<=", search + '\uf8ff');
       }
+
+      if (isPengeluaran !== undefined && isPengeluaran !== null) {
+        query = query.where("isPengeluaran", "==", isPengeluaran);
+      }
+
+      const snapshot = await query.get();
+
+      if (snapshot.empty) {
+        return [];
+      }
+
       return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-      throw new Error("Error fetching kategori: " + error.message);
+      throw new Error("Error fetching categories: " + error.message);
     }
   }
 
-  async getKategoriById(id) {
+  async getCategoryById(id) {
     try {
       const doc = await this.collection.doc(id).get();
+      
       if (!doc.exists) {
-        throw new Error("Kategori not found");
+        throw new Error("Category not found");
       }
-      return doc.data();
+      
+      return { id: doc.id, ...doc.data() };
     } catch (error) {
-      throw new Error("Error fetching kategori by ID: " + error.message);
+      throw new Error("Error fetching category: " + error.message);
     }
   }
 
-  async addKategori(kategori, userId) {
-    const docRef = await this.collection.add({
-      ...kategori,
-      userId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    docRef.update({ id: docRef.id });
-    return {
-      id: docRef.id,
-      ...kategori,
-      userId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  async addCategory(category, userId) {
+    try {
+      const docRef = this.collection.doc();
+      const data = {
+        ...category,
+        userId: userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      await docRef.set(data);
+    
+      return {
+        id: docRef.id,
+        ...data
+      };
+    } catch (error) {
+      throw new Error("Error adding category: " + error.message);
+    }
   }
 
-  async updateKategori(id, kategori, userId) {
-    const docRef = this.collection.doc(id);
-    const doc = await docRef.get();
-    if (!doc.exists) {
-      throw new Error("Kategori not found");
-    }
-    await docRef.update({ ...kategori, userId, updatedAt: new Date() });
+  async updateCategory(id, category, userId) {
+    try {
+      const docRef = this.collection.doc(id);
+      const doc = await docRef.get();
+      
+      if (!doc.exists) {
+        throw new Error("Category not found");
+      }
 
-    return { id: docRef.id, ...kategori, userId, updatedAt: new Date() };
+      // Periksa apakah kategori milik user yang benar
+      const existingData = doc.data();
+      if (existingData.userId !== userId) {
+        throw new Error("Unauthorized: You can only update your own categories");
+      }
+
+      const updateData = { 
+        ...category, 
+        userId, 
+        updatedAt: new Date() 
+      };
+      
+      await docRef.update(updateData);
+
+      // Return data yang sudah diupdate
+      const updatedDoc = await docRef.get();
+      return { id: docRef.id, ...updatedDoc.data() };
+    } catch (error) {
+      throw new Error("Error updating category: " + error.message);
+    }
   }
 
-  async deleteKategori(id, userId) {
-    const docRef = this.collection.doc(id);
-    const doc = await docRef.get();
-    if (!doc.exists) {
-      throw new Error("Kategori not found");
+  async deleteCategory(id, userId) {
+    try {
+      const docRef = this.collection.doc(id);
+      const snapshot = await docRef.get();
+
+      if (!snapshot.exists) {
+        throw new Error("Category not found");
+      }
+
+      // Periksa apakah kategori milik user yang benar
+      const existingData = snapshot.data();
+      if (existingData.userId !== userId) {
+        throw new Error("Unauthorized: You can only delete your own categories");
+      }
+
+      await docRef.delete();
+      return { 
+        id: id, 
+        message: "Category deleted successfully" 
+      };
+    } catch (error) {
+      throw new Error("Error deleting category: " + error.message);
     }
-    await docRef.delete();
-    return { id: docRef.id, userId };
   }
 }
 

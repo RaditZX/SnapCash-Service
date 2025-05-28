@@ -1,50 +1,77 @@
-const KategoriRepository = require("../repository/KategoriRepository");
-const KategoriEntity = require("../Entity/KategoriEntity");
+const kategoriRepository = require('../repository/kategoriRepository');
+const auth = require('./authService');
+const KategoriEntity = require('../Entity/KategoriEntity');
 
 class KategoriService {
-  constructor() {
-    this.repository = KategoriRepository;
-  }
-
-  async getAllKategori(userId) {
-    return await this.repository.getAllKategori(userId);
-  }
-
-  async getKategoriById(id, userId) {
-    const kategori = await this.repository.getKategoriById(id);
-    if (kategori.userId !== userId) {
-      throw new Error("Unauthorized access to this kategori");
+  async getAllCategories(userId, search, isPengeluaran) {
+    try {
+      const categories = await kategoriRepository.getAllCategories(userId, search, isPengeluaran);
+      return categories.map(cat => new KategoriEntity(cat.id, cat.nama, cat.isPengeluaran));
+    } catch (error) {
+      throw new Error("Error fetching categories: " + error.message);
     }
-    return kategori;
   }
 
-  async addKategori(kategoriData, userId) {
-    console.log("Service received kategoriData:", kategoriData); // Debug log
-    const kategori = new KategoriEntity({
-      namaKategori: kategoriData.namaKategori,
-      isPengeluaran: kategoriData.isPengeluaran
-    });
-    const missingFields = kategori.validateFields();
+  async getCategoryById(id) {
+    try {
+      const category = await kategoriRepository.getCategoryById(id);
+      return new KategoriEntity(category.id, category.nama, category.isPengeluaran);
+    } catch (error) {
+      throw new Error("Error fetching category: " + error.message);
+    }
+  }
+
+  async addCategory(categoryData, userId) {
+    // Untuk CREATE, ID akan null karena auto-generated
+    const category = new KategoriEntity(null, categoryData.nama, categoryData.isPengeluaran);
+    
+    // Gunakan validasi khusus untuk CREATE
+    const missingFields = category.validateForCreate();
     if (missingFields.length > 0) {
-      throw new Error(`All fields are required. Missing: ${missingFields.join(", ")}`);
+      throw new Error(`Missing fields: ${missingFields.join(', ')}`);
     }
-    console.log("Filled fields:", kategori.getFilledFields()); // Debug log
-    return await this.repository.addKategori(kategori.getFilledFields(), userId);
+
+    if (!category.hasAnyValue()) {
+      throw new Error("No valid fields provided for the category.");
+    }
+
+    try {
+      // Gunakan method khusus untuk CREATE yang tidak menyertakan ID
+      const data = category.getFilledFieldsForCreate();
+      return await kategoriRepository.addCategory(data, userId);
+    } catch (error) {
+      throw new Error("Error adding category: " + error.message);
+    }
   }
 
-  async updateKategori(id, kategoriData, userId) {
-    const kategori = new KategoriEntity({
-      namaKategori: kategoriData.namaKategori,
-      isPengeluaran: kategoriData.isPengeluaran
-    });
-    if (!kategori.hasAnyValue()) {
-      throw new Error("Minimal satu field harus diisi untuk melakukan update.");
+  async updateCategory(id, categoryData, userId) {
+    const category = new KategoriEntity(id, categoryData.nama, categoryData.isPengeluaran);
+    
+    // Untuk UPDATE, gunakan validasi dengan ID
+    const missingFields = category.validateForUpdate();
+    if (missingFields.length > 0) {
+      throw new Error(`Missing fields: ${missingFields.join(', ')}`);
     }
-    return await this.repository.updateKategori(id, kategori.getFilledFields(), userId);
+
+    if (!category.hasAnyValue()) {
+      throw new Error("No valid fields provided for the category.");
+    }
+
+    try {
+      const data = category.getFilledFields();
+      return await kategoriRepository.updateCategory(id, data, userId);
+    } catch (error) {
+      throw new Error("Error updating category: " + error.message);
+    }
   }
 
-  async deleteKategori(id, userId) {
-    return await this.repository.deleteKategori(id, userId);
+  async deleteCategory(id, userId) {
+    try {
+      const result = await kategoriRepository.deleteCategory(id, userId);
+      return result;
+    } catch (error) {
+      throw new Error("Error deleting category: " + error.message);
+    }
   }
 }
 
