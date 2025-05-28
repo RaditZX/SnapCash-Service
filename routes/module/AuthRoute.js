@@ -1,5 +1,7 @@
 const AuthController = require("../../Controller/userController");
 const verifyFirebaseToken = require("../../middleware/firebaseMiddleware");
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 module.exports = (router) => {
     // Sign up a new user
@@ -15,5 +17,8 @@ module.exports = (router) => {
     router.post("/signinWithGoogle", verifyFirebaseToken, AuthController.signInWithGoogle);
     // Register with Google
     router.post("/registerWithGoogle", verifyFirebaseToken, AuthController.registerWithGoogle);
+
+    router.put("/updateProfile",upload.single('photo'), verifyFirebaseToken, AuthController.updateProfile);
+    router.get("/getUser", verifyFirebaseToken, AuthController.getUserData);
     
 }

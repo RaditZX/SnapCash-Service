@@ -1,8 +1,18 @@
-const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } = require("firebase/auth");
+const {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  sendEmailVerification,
+} = require("firebase/auth");
 const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
 const userEntity = require("../Entity/UserEntity");
 const authRepository = require("../repository/authRepository");
+const currencyRepository = require("../repository/currencyRepository");
+const { firebaseService } = require("./firebaseService");
+const firebases = new firebaseService();
+const sharp = require("sharp");
 
 const auth = getAuth(firebase);
 
@@ -33,9 +43,9 @@ class AuthService {
   getUserAuthenticate = async (user) => {
     try {
       const userId = user.uid;
-        
+
       if (!userId) {
-          throw new Error("User not authenticated");
+        throw new Error("User not authenticated");
       }
 
       return userId;
@@ -44,7 +54,7 @@ class AuthService {
       throw new Error("User not authenticated", error);
     }
   };
-  
+
   async signUp(email, password, username, photo) {
     try {
       if (!email || !password || !username) {
@@ -58,14 +68,17 @@ class AuthService {
         userId: user.user.uid,
         email,
         username,
-        foto: photo
+        foto: photo,
+        currencyChoice: "IDR",
+        limitOCR:{limit: 3, used: 0, resetDate: new Date()},
       });
 
       await authRepository.createUser(userEntityInstance);
 
       return {
         status: 202,
-        message: "Verification email sent. Please verify your email before logging in."
+        message:
+          "Verification email sent. Please verify your email before logging in.",
       };
     } catch (error) {
       console.error(error);
@@ -82,17 +95,23 @@ class AuthService {
       const isEmailVerified = await getUserVerificationStatusByEmail(email);
 
       if (isEmailVerified) {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        await updateLimitOCR(userCredential.user.uid);
         return {
           status: 200,
           data: { userCredential },
-          message: "Login Successful"
+          message: "Login Successful",
         };
       } else {
         await sendEmailVerificationLink();
         return {
           status: 403,
-          message: "Please verify your email before logging in. We have resent the verification email."
+          message:
+            "Please verify your email before logging in. We have resent the verification email.",
         };
       }
     } catch (error) {
@@ -105,15 +124,16 @@ class AuthService {
     try {
       const isUserExist = await authRepository.getUserByEmail(user.email);
       if (!isUserExist) {
-        return{
+        return {
           status: 404,
-          message: "Akun Tidak Terdeteksi, silahkan "
-        }
+          message: "Akun Tidak Terdeteksi, silahkan ",
+        };
       }
+      await updateLimitOCR(user.uid);
       return {
         status: 200,
         data: { user },
-        message: "Login Successful"
+        message: "Login Successful",
       };
     } catch (error) {
       console.error(error);
@@ -127,37 +147,38 @@ class AuthService {
       if (!user || !user.email || !user.uid) {
         throw new Error("User email or uid is missing");
       }
-  
+
       const existingUser = await authRepository.getUserByEmail(user.email);
-      
+
       // Check if the user already exists
       if (!existingUser) {
         const userEntityInstance = new userEntity({
           userId: user.uid,
           email: user.email,
+          currencyChoice: "IDR",
+          limitOCR:{limit: 3, used: 0, resetDate: new Date()},
         });
-  
+
         await authRepository.createUser(userEntityInstance);
       }
-  
+
       // Return successful response
       return {
         status: 200,
         data: { user },
-        message: "Registration successful"
+        message: "Registration successful",
       };
-      
     } catch (error) {
       console.error("Registration failed:", error); // Improved error logging
-  
+
       // Provide specific error message and return status 500
       return {
         status: 500,
-        message: `Registration failed: ${error.message || error}`
+        message: `Registration failed: ${error.message || error}`,
       };
     }
   }
-  
+
   async signOut() {
     try {
       const user = auth.currentUser;
@@ -174,22 +195,40 @@ class AuthService {
     }
   }
 
-
-  async updateProfile(userId, email, username, photo, currencyChoice, no_hp) {
+  async updateProfile(user, username, photo, currencyChoice, no_hp) {
     try {
-      const user = await authRepository.getUserById(userId);
+           let photoUrl
+      if (photo) {
+        const buffer = Buffer.from(photo); // Konversi dari ArrayBuffer ke Buffer
 
-      if (!user) {
-        throw new Error("User not found");
+        const compressedImage = await sharp(buffer)
+          .jpeg({ quality: 70 }) // Kompresi gambar dengan kualitas 80%
+          .toBuffer();
+
+        photoUrl = photo;
+        if (compressedImage) {
+          const url = await firebases.uploadImageToFirebase(compressedImage, {
+            fileName :`profile/${user.uid}-${Date.now()}.jpg`,
+            mimetype: "image/jpeg",
+          });
+          if (!url) {
+            throw new Error("Failed to upload image");
+          }
+          console.log("Image URL:", url);
+          photoUrl = url;
+        }
       }
+
+      const userId = user.uid;
+      const email = user.email;
 
       const updatedUser = new userEntity({
         userId,
         email,
         username,
-        foto: photo,
+        foto: photoUrl,
         currencyChoice,
-        no_hp
+        no_hp,
       });
 
       const missingFields = updatedUser.validateFields();
@@ -203,12 +242,67 @@ class AuthService {
       }
 
       await authRepository.updateUser(userId, filledFields);
-      return { status: 200, message: "Profile updated successfully" };
+      return {
+        status: 200,
+        message: "Profile updated successfully",
+        data: filledFields,
+      };
     } catch (error) {
       console.error(error);
       throw error;
-    } 
+    }
+  }
+
+  async getUserData(userId) {
+    try {
+      const user = await authRepository.getUserById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+      return {
+        status: 200,
+        data: user,
+        message: "User data retrieved successfully",
+      };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 }
+
+const updateLimitOCR = async (userId) => {
+  try {
+    const user = await authRepository.getUserById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const limitOCR = user.limitOCR;
+    if (!limitOCR || limitOCR.used >= limitOCR.limit) {
+      return {
+        status: 403,
+        message: "Limit OCR has been reached",
+      };
+    }
+
+    // Update the used count and reset date
+    if (!limitOCR.resetDate || new Date() > limitOCR.resetDate) {
+      limitOCR.used = 0; // Reset used count if reset date has passed
+      limitOCR.resetDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // Reset after 24 hours
+      await authRepository.updateUser(userId, { limitOCR });
+      return {
+      status: 200,
+      data: limitOCR,
+      message: "Limit OCR updated successfully",
+    };
+    }
+    return;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
 
 module.exports = new AuthService();

@@ -72,11 +72,12 @@ class PengeluaranController {
 
   async updatePengeluaran(req, res) {
     try {
+       const userId = await auth.getUserAuthenticate(req.user);
       const { id } = req.params;
       const result = await pengeluaranService.updatePengeluaran(
         id,
         req.body,
-        req.user
+        userId 
       );
 
       sendResponse(200, result, "Data successfully updated", res, true);

@@ -11,8 +11,8 @@ class UserEntity {
     // Fungsi untuk validasi field yang harus ada
     validateFields() {
         const missing = [];
-        if (!this.userId) missing.push("userId");
-        if (!this.email) missing.push("email");
+        // if (!this.userId) missing.push("userId");
+        // if (!this.email) missing.push("email");
 
         return missing;
     }
