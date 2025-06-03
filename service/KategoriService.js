@@ -5,10 +5,17 @@ const KategoriEntity = require('../Entity/KategoriEntity');
 class KategoriService {
   async getAllCategories(userId, search, isPengeluaran) {
     try {
-      const categories = await kategoriRepository.getAllCategories(userId, search, isPengeluaran);
-      return categories.map(cat => new KategoriEntity(cat.id, cat.nama, cat.isPengeluaran));
+        const categories = await kategoriRepository.getAllCategories(userId, search, isPengeluaran);
+        return categories.map(cat => {
+            const category = new KategoriEntity(cat.id, cat.nama, cat.isPengeluaran);
+            category.userId = cat.userId;
+            category.createdAt = cat.createdAt;
+            category.updatedAt = cat.updatedAt;
+            return category;
+        });
     } catch (error) {
-      throw new Error("Error fetching categories: " + error.message);
+        console.error("Error in KategoriService.getAllCategories:", error.message, error.stack);
+        throw new Error("Error fetching categories: " + error.message);
     }
   }
 
