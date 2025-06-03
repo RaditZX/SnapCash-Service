@@ -5,14 +5,16 @@ const auth = require("../service/authService");
 class KategoriController {
     async getAllCategories(req, res) {
         try {
-        const userId = await auth.getUserAuthenticate(req.user);
-        const search = req.query.search ?? null;
-        const isPengeluaran = req.query.isPengeluaran === 'true' ? true : (req.query.isPengeluaran === 'false' ? false : null);
-        
-        const categories = await kategoriService.getAllCategories(userId, search, isPengeluaran);
-        sendResponse(200, categories, "Categories successfully retrieved", res, true);
+            const userId = req.user.uid; // Sesuaikan dengan middleware
+            const { search, isPengeluaran } = req.query;
+            const parsedIsPengeluaran = isPengeluaran === 'true' ? true : isPengeluaran === 'false' ? false : null;
+            console.log("getAllCategories request:", { userId, search, parsedIsPengeluaran });
+
+            const categories = await kategoriService.getAllCategories(userId, search, parsedIsPengeluaran);
+            sendResponse(200, categories || [], "Categories successfully retrieved", res, true);
         } catch (error) {
-        sendResponse(500, req.body, "Error retrieving categories: " + error.message, res);
+            console.error("Error in KategoriController.getAllCategories:", error.message, error.stack);
+            sendResponse(500, [], "Error retrieving categories: " + error.message, res, false);
         }
     }
 
@@ -55,17 +57,18 @@ class KategoriController {
 
     async deleteCategory(req, res) {
         try {
-        const { id } = req.params;
-        const userId = await auth.getUserAuthenticate(req.user);
-        const result = await kategoriService.deleteCategory(id, userId);
-        if (!result) {
-            return sendResponse(404, req.body, "Category not found", res);
-        }
-        sendResponse(200, null,
-            "Category successfully deleted", res, true);
-        }
-        catch (error) {
-        sendResponse(500, req.body, "Error deleting category: " + error.message, res);
+            const { id } = req.params;
+            const userId = req.user.uid;
+            console.log("deleteCategory request:", { id, userId });
+
+            const result = await kategoriService.deleteCategory(id, userId);
+            if (!result) {
+                return sendResponse(404, {}, "Category not found", res, false);
+            }
+            sendResponse(200, result, "Category successfully deleted", res, true);
+        } catch (error) {
+            console.error("Error in KategoriController.deleteCategory:", error.message, error.stack);
+            sendResponse(500, {}, "Error deleting category: " + error.message, res, false);
         }
     }
     
