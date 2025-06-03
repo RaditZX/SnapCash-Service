@@ -9,7 +9,8 @@ class DashboardService {
           const jenis = req.query.jenis || "Pemasukan";
           const filter = req.query.filter || "tahun";
           const tahun = parseInt(req.query.tahun) || new Date().getFullYear();
-          const bulan = req.query.bulan ? parseInt(req.query.bulan) : undefined;
+          const bulan = req.query.bulan ? parseInt(req.query.bulan) : moment().month() + 1;
+
           const hari = req.query.hari ? parseInt(req.query.hari) : undefined;
       
           const user = req.user; // via middleware
@@ -18,6 +19,7 @@ class DashboardService {
           const snapshot = await DashboardRepository.getDataByJenisDanWaktu(
             userId, jenis, filter, tahun, bulan, hari
           );
+
       
           const dashboardData = await processSnapshot(snapshot, filter, tahun, bulan, hari, userId , jenis);
       
@@ -27,38 +29,51 @@ class DashboardService {
           return sendResponse(500, null, error.message, res);
         }
       };
+    
+    getDashboardAdminData = async (req, res) => {
+        try {
+          const user = await auth.getUserData(req.user.uid);
+          if (!user.data || !user.data.role || user.data.role !== "admin") {
+            return {
+              status: 403,
+              message: "Access denied. You are not an admin.",
+            };
+          }
+
+          const userRegistration = req.query.userRegistration || "hari";
+          const userRegistrationStartDate = req.query.startDate
+            ? new Date(req.query.startDate)
+            : moment().subtract(6, "days").startOf("day").toDate();
+
+          
+          const userRegistrationEndDate = req.query.endDate
+            ? new Date(req.query.endDate)
+            : moment().endOf("day").toDate();
+
+          const userRegistrationData = await DashboardRepository.getUserRegistrationDataCount({
+            startDate: userRegistrationStartDate,
+            endDate: userRegistrationEndDate,
+            groupBy: mapGroup(userRegistration),
+          });
+
+          const jenis = req.query.jenis || "Pemasukan";
+
+          const totalEachKategori = await DashboardRepository.getTotalEachKategori({
+            jenis,
+          });
+
+          return sendResponse(200, {
+            userRegistrationData,
+            totalEachKategori,
+          }, "Dashboard data retrieved successfully", res, true);
+
+        } catch (error) {
+          console.error("Error retrieving admin dashboard data:", error);
+          return sendResponse(500, null, error.message, res);
+        }
+      };
 }
 
-
-// ===== Helper Functions =====
-function getPeriodTotal(docData, docDate, filter, tahun, bulan, hari) {
-    const total = docData.total || 0;
-  
-    if (filter === "tahun") {
-      return {
-        current: docDate.year() === tahun ? total : 0,
-        previous: docDate.year() === tahun - 1 ? total : 0
-      };
-    }
-  
-    if (filter === "bulan") {
-      return {
-        current: docDate.year() === tahun && docDate.month() + 1 === bulan ? total : 0,
-        previous: docDate.year() === tahun && docDate.month() + 1 === bulan - 1 ? total : 0
-      };
-    }
-  
-    if (filter === "hari") {
-      const currentDay = moment(`${tahun}-${bulan}-${hari}`);
-      const previousDay = currentDay.clone().subtract(1, 'day');
-      return {
-        current: docDate.isSame(currentDay, 'day') ? total : 0,
-        previous: docDate.isSame(previousDay, 'day') ? total : 0
-      };
-    }
-  
-    return { current: 0, previous: 0 };
-  }
   
   function calculatePercentageChange(current, previous) {
     if (previous !== 0) {
@@ -68,6 +83,14 @@ function getPeriodTotal(docData, docDate, filter, tahun, bulan, hari) {
     }
   }
   
+  const mapGroup = (type) => {
+    switch (type.toLowerCase()) {
+      case "hari": return "day";
+      case "bulan": return "month";
+      case "tahun": return "year";
+      default: return "day";
+    }
+  };
   
   function calculateTotalChange(current, previous) {
     return current - previous;
@@ -90,17 +113,7 @@ function getPeriodTotal(docData, docDate, filter, tahun, bulan, hari) {
   
     snapshot.forEach((doc) => {
       const data = doc.data();
-      if (!data.updatedAt || !data.kategori) return;
-  
-      const tanggal = moment(data.updatedAt.toDate());
-  
-      // Filter berdasarkan waktu
-      const cocok =
-        (filter === "tahun" && tanggal.year() === tahun) ||
-        (filter === "bulan" && tanggal.year() === tahun && tanggal.month() + 1 === bulan) ||
-        (filter === "hari" && tanggal.isSame(moment(`${tahun}-${bulan}-${hari}`), "day"));
-  
-      if (!cocok) return;
+      if (!data.tanggal || !data.kategori) return;
   
       const kategori = data.kategori;
       const total = data.total || 0;
@@ -126,21 +139,25 @@ function getPeriodTotal(docData, docDate, filter, tahun, bulan, hari) {
         startDate = moment().year(targetYear).startOf("year").toDate();
         endDate = moment().year(targetYear).endOf("year").toDate();
         keyLabel = targetYear.toString();
-  
+
       } else if (filter === "bulan") {
         if (!bulan) continue;
-        const targetYear = tahun - i;
-        startDate = moment().year(targetYear).month(bulan - 1).startOf("month").toDate();
-        endDate = moment().year(targetYear).month(bulan - 1).endOf("month").toDate();
-        keyLabel = `${targetYear}-${String(bulan).padStart(2, "0")}`;
-  
+        
+        // Kurangi i bulan dari bulan sekarang di tahun yang sama
+        const targetDate = moment(`${tahun}-${bulan}-01`, "YYYY-M-D").subtract(i, "months");
+        startDate = targetDate.clone().startOf("month").toDate();
+        endDate = targetDate.clone().endOf("month").toDate();
+        keyLabel = targetDate.format("YYYY-MM");
+
       } else if (filter === "hari") {
         if (!bulan || !hari) continue;
+
+        // Kurangi i hari dari tanggal yang diberikan di tahun & bulan yang sama
         const targetDate = moment(`${tahun}-${bulan}-${hari}`, "YYYY-M-D").subtract(i, "days");
         startDate = targetDate.clone().startOf("day").toDate();
         endDate = targetDate.clone().endOf("day").toDate();
         keyLabel = targetDate.format("YYYY-MM-DD");
-  
+
       } else {
         throw new Error("Filter tidak dikenali: gunakan 'tahun', 'bulan', atau 'hari'");
       }

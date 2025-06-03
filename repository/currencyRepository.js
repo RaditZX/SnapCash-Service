@@ -14,14 +14,19 @@ class CurrencyRepository {
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
-    async getCurrencyById(id) {
-        const currencyRef = this.db.collection("currency").doc(id);
-        const doc = await currencyRef.get();
+    async getCurrencyById(currency_code) {
+        const currencyRef = this.db.collection("currency").where("currency_code", "==", currency_code);
+        const snapshot = await currencyRef.get();
+        if (snapshot.empty) {
+            return null;
+        }
+        const doc = snapshot.docs[0];
         if (!doc.exists) {
             return null;
         }
         return { id: doc.id, ...doc.data() };
     }
+       
 
     async addCurrency(data) {
         const currencyRef = this.db.collection("currency");
