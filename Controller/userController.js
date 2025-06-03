@@ -26,10 +26,34 @@ class AuthController {
     }
   }
 
+  async signInAdmin(req, res) {
+    const { email, password } = req.body;
+    try {
+      const result = await authService.signInAdmin(email, password);
+      sendResponse(result.status, result.data, result.message, res, true);
+    }
+    catch (error) {
+      console.error(error);
+      sendResponse(400, req.body, error.message, res, false);
+    }
+  }
+
+
   async signInWithGoogle(req, res) {
     try {
       const { user } = req;
       const result = await authService.signInWithGoogle(user);
+      sendResponse(result.status, result.data, result.message, res, true);
+    } catch (error) {
+      console.error(error);
+      sendResponse(500, error, "Login failed", res, false);
+    }
+  }
+
+  async signInWithGoogleAdmin(req, res) {
+    try {
+      const { user } = req;
+      const result = await authService.signInGoogleAdmin(user);
       sendResponse(result.status, result.data, result.message, res, true);
     } catch (error) {
       console.error(error);
@@ -79,6 +103,16 @@ class AuthController {
 
     try {
       const result = await authService.getUserData(user.uid);
+      sendResponse(result.status, result.data, result.message, res, true);
+    } catch (error) {
+      console.error(error);
+      sendResponse(400, req.body, error.message, res, false);
+    }
+  }
+
+  async getAllUsers(req, res) {
+    try {
+      const result = await authService.getAllUsers(req.user);
       sendResponse(result.status, result.data, result.message, res, true);
     } catch (error) {
       console.error(error);

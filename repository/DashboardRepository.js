@@ -88,6 +88,99 @@ class DashboardRepository {
       throw new Error("Error retrieving data by range");
     }
   }
+
+  async getTotalUsers() {
+    try {
+      const usersRef = this.db.collection("users");
+      const snapshot = await usersRef.get();
+      return snapshot.size;
+    } catch (error) {
+      console.error("Error retrieving total users:", error);
+      throw new Error("Error retrieving total users");
+    }
+  }
+  async getUserRegistrationDataCount({ startDate, endDate, groupBy = "day" }) {
+    try {
+      const usersRef = this.db.collection("users");
+
+      const start = moment(startDate).startOf("day").toDate();
+      const end = moment(endDate).endOf("day").toDate();
+
+      const snapshot = await usersRef
+        .where("createdAt", ">=", start)
+        .where("createdAt", "<=", end)
+        .get();
+
+      const groupedRegistrations = {};
+      let totalUsers = 0;
+
+      snapshot.forEach(doc => {
+        const userData = doc.data();
+        const createdAt = userData.createdAt?.toDate?.();
+        if (!createdAt) return;
+
+        totalUsers++;
+
+        let key;
+        switch (groupBy) {
+          case "day":
+            key = moment(createdAt).format("YYYY-MM-DD");
+            break;
+          case "month":
+            key = moment(createdAt).format("YYYY-MM");
+            break;
+          case "year":
+            key = moment(createdAt).format("YYYY");
+            break;
+          default:
+            key = moment(createdAt).format("YYYY-MM-DD");
+        }
+
+        if (!groupedRegistrations[key]) {
+          groupedRegistrations[key] = 1;
+        } else {
+          groupedRegistrations[key]++;
+        }
+      });
+
+      return {
+        totalUsers,
+        groupedRegistrations
+      };
+
+    } catch (error) {
+      console.error("Error retrieving user registration data count:", error);
+      throw new Error("Error retrieving user registration data count");
+    }
+  }
+
+  async getTotalEachKategori(jenis) {
+    try {
+      console.log("Retrieving total count for each category in:", jenis.jenis);
+      const snapshot = await this.db.collection(jenis.jenis).get();
+      const totalKategori = {};
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (!data.tanggal || !data.kategori) return;
+
+        const kategori = data.kategori;
+
+        if (!totalKategori[kategori]) {
+          totalKategori[kategori] = 0;
+        }
+
+        // Tambah 1 untuk setiap dokumen dengan kategori tersebut
+        totalKategori[kategori] += 1;
+      });
+
+      return totalKategori;
+    } catch (error) {
+      console.error("Error retrieving count by category:", error);
+      throw new Error("Error retrieving count by category");
+    }
+  }
+
 }
 
 module.exports = new DashboardRepository();

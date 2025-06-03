@@ -19,6 +19,7 @@ router.post(
   );
 
 router.get('/getDashboardAnalytics', verifyFirebaseToken, DashboardService.getDashboardData);
+router.get('/getDashbaoardAnalytics/admin', verifyFirebaseToken, DashboardService.getDashboardAdminData);
 router.get('/', (req, res) => {
     res.send('Hello From SnapCash!');
 });

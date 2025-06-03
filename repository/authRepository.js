@@ -6,6 +6,15 @@ class authRepository {
     this.db = admin.firestore();
   }
 
+  async getAllUsers() {
+    const usersRef = this.db.collection("users");
+    const snapshot = await usersRef.get();
+    if (snapshot.empty) {
+      return [];
+    }
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
   async getUserById(userId) {
     const userRef = this.db.collection("users").where("userId", "==", userId);
     const snapshot = await userRef.get();

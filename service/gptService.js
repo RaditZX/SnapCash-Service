@@ -115,7 +115,7 @@ class gptService{
         } else if (transactionType === "pengeluaran") {
             return await pengeluaranService.addPengeluaranByGPT(invoiceData, user);
         } else {
-            throw new Error("Invalid transaction type");
+            throw new Error("Invalid Invoice");
         }
     }
 

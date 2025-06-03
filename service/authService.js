@@ -67,7 +67,7 @@ class AuthService {
       const userEntityInstance = new userEntity({
         userId: user.user.uid,
         email,
-        username,
+        username : " ",
         foto: photo,
         currencyChoice: "IDR",
         limitOCR:{limit: 3, used: 0, resetDate: new Date()},
@@ -120,6 +120,49 @@ class AuthService {
     }
   }
 
+  async signInAdmin(email, password) {
+    try {
+      if (!email || !password) {
+        throw new Error("Email and password are required");
+      }
+
+      const isEmailVerified = await getUserVerificationStatusByEmail(email);
+
+      if (isEmailVerified) {
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        // Check if the user is an admin
+        const user = await authRepository.getUserById(userCredential.user.uid);
+        if (user && user.role === "admin") {
+          return {
+            status: 200,
+            data: { userCredential },
+            message: "Admin login successful",
+          };
+        } else {
+          return {
+            status: 403,
+            message: "Access denied. You are not an admin.",
+          };
+        }
+      } else {
+        await sendEmailVerificationLink();
+        return {
+          status: 403,
+          message:
+            "Please verify your email before logging in. We have resent the verification email.",
+        };
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async signInWithGoogle(user) {
     try {
       const isUserExist = await authRepository.getUserByEmail(user.email);
@@ -129,6 +172,7 @@ class AuthService {
           message: "Akun Tidak Terdeteksi, silahkan ",
         };
       }
+
       await updateLimitOCR(user.uid);
       return {
         status: 200,
@@ -137,7 +181,7 @@ class AuthService {
       };
     } catch (error) {
       console.error(error);
-      throw new Error("Login failed");
+      throw new Error(error);
     }
   }
 
@@ -253,6 +297,35 @@ class AuthService {
     }
   }
 
+  async signInGoogleAdmin(user) {
+    try {
+      const isUserExist = await authRepository.getUserByEmail(user.email);
+      if (!isUserExist) {
+        return {
+          status: 404,
+          message: "Akun Tidak Terdeteksi, silahkan ",
+        };
+      }
+
+      // Check if the user is an admin
+      if (isUserExist.role === "admin") {
+        return {
+          status: 200,
+          data: { user },
+          message: "Admin login successful",
+        };
+      } else {
+        return {
+          status: 403,
+          message: "Access denied. You are not an admin.",
+        };
+      }
+    } catch (error) {
+      console.error(error);
+      throw new Error("Login failed");
+    }
+  }
+
   async getUserData(userId) {
     try {
       const user = await authRepository.getUserById(userId);
@@ -269,7 +342,52 @@ class AuthService {
       throw error;
     }
   }
+
+  async getAllUsers(_user){
+    try {
+      const user = await getUserDatas(_user.uid);
+      if (!user.data || !user.data.role || user.data.role !== "admin") {
+        return {
+          status: 403,
+          message: "Access denied. You are not an admin.",
+        };
+      }
+      const users = await authRepository.getAllUsers();
+      if (!users || users.length === 0) {
+        return {
+          status: 404,
+          message: "No users found",
+        };
+      }
+      return {
+        status: 200,
+        data: users,
+        message: "Users retrieved successfully",
+      };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+    
 }
+
+  const getUserDatas = async (userId) => {
+    try {
+      const user = await authRepository.getUserById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+      return {
+        status: 200,
+        data: user,
+        message: "User data retrieved successfully",
+      };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
 
 const updateLimitOCR = async (userId) => {
   try {
@@ -277,14 +395,8 @@ const updateLimitOCR = async (userId) => {
     if (!user) {
       throw new Error("User not found");
     }
-
+    console.log("User signed in with Google:", user);
     const limitOCR = user.limitOCR;
-    if (!limitOCR || limitOCR.used >= limitOCR.limit) {
-      return {
-        status: 403,
-        message: "Limit OCR has been reached",
-      };
-    }
 
     // Update the used count and reset date
     if (!limitOCR.resetDate || new Date() > limitOCR.resetDate) {
@@ -302,6 +414,8 @@ const updateLimitOCR = async (userId) => {
     console.error(error);
     throw error;
   }
+
+
 }
 
 

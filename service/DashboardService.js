@@ -29,6 +29,49 @@ class DashboardService {
           return sendResponse(500, null, error.message, res);
         }
       };
+    
+    getDashboardAdminData = async (req, res) => {
+        try {
+          const user = await auth.getUserData(req.user.uid);
+          if (!user.data || !user.data.role || user.data.role !== "admin") {
+            return {
+              status: 403,
+              message: "Access denied. You are not an admin.",
+            };
+          }
+
+          const userRegistration = req.query.userRegistration || "hari";
+          const userRegistrationStartDate = req.query.startDate
+            ? new Date(req.query.startDate)
+            : moment().subtract(6, "days").startOf("day").toDate();
+
+          
+          const userRegistrationEndDate = req.query.endDate
+            ? new Date(req.query.endDate)
+            : moment().endOf("day").toDate();
+
+          const userRegistrationData = await DashboardRepository.getUserRegistrationDataCount({
+            startDate: userRegistrationStartDate,
+            endDate: userRegistrationEndDate,
+            groupBy: mapGroup(userRegistration),
+          });
+
+          const jenis = req.query.jenis || "Pemasukan";
+
+          const totalEachKategori = await DashboardRepository.getTotalEachKategori({
+            jenis,
+          });
+
+          return sendResponse(200, {
+            userRegistrationData,
+            totalEachKategori,
+          }, "Dashboard data retrieved successfully", res, true);
+
+        } catch (error) {
+          console.error("Error retrieving admin dashboard data:", error);
+          return sendResponse(500, null, error.message, res);
+        }
+      };
 }
 
   
@@ -40,6 +83,14 @@ class DashboardService {
     }
   }
   
+  const mapGroup = (type) => {
+    switch (type.toLowerCase()) {
+      case "hari": return "day";
+      case "bulan": return "month";
+      case "tahun": return "year";
+      default: return "day";
+    }
+  };
   
   function calculateTotalChange(current, previous) {
     return current - previous;
@@ -62,7 +113,6 @@ class DashboardService {
   
     snapshot.forEach((doc) => {
       const data = doc.data();
-      console.log("Data:", data);
       if (!data.tanggal || !data.kategori) return;
   
       const kategori = data.kategori;
