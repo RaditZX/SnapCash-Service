@@ -5,16 +5,30 @@ const auth = require("../service/authService");
 class KategoriController {
     async getAllCategories(req, res) {
         try {
-            const userId = req.user.uid; // Sesuaikan dengan middleware
-            const { search, isPengeluaran } = req.query;
-            const parsedIsPengeluaran = isPengeluaran === 'true' ? true : isPengeluaran === 'false' ? false : null;
-            console.log("getAllCategories request:", { userId, search, parsedIsPengeluaran });
+        const userId = req.user.uid; // Sesuaikan dengan middleware
+        const { search, isPengeluaran } = req.query;
+        let parsedIsPengeluaran = null;
+        if (isPengeluaran === 'true') {
+            parsedIsPengeluaran = true;
+        } else if (isPengeluaran === 'false') {
+            parsedIsPengeluaran = false;
+        }
+        console.log("getAllCategories request:", { userId, search, parsedIsPengeluaran });
 
-            const categories = await kategoriService.getAllCategories(userId, search, parsedIsPengeluaran);
-            sendResponse(200, categories || [], "Categories successfully retrieved", res, true);
+        const categories = await kategoriService.getAllCategories(userId, search, parsedIsPengeluaran);
+        sendResponse(200, categories || [], "Categories successfully retrieved", res, true);
         } catch (error) {
-            console.error("Error in KategoriController.getAllCategories:", error.message, error.stack);
-            sendResponse(500, [], "Error retrieving categories: " + error.message, res, false);
+        console.error("Error in KategoriController.getAllCategories:", error.message, error.stack);
+        let errorMessage = "Error retrieving categories";
+        if (error.message.includes("Gunakan Huruf")) {
+            errorMessage = "Parameter pencarian tidak valid";
+            sendResponse(400, [], errorMessage, res, false);
+        } else if (error.message.includes("fetching categories")) {
+            errorMessage = "Terjadi kesalahan saat mengambil data kategori";
+            sendResponse(500, [], errorMessage, res, false);
+        } else {
+            sendResponse(500, [], errorMessage + ": " + error.message, res, false);
+        }
         }
     }
 
