@@ -9,38 +9,41 @@ class KategoriRepository {
 
   async getAllCategories(userId, search, isPengeluaran) {
     try {
-        let query = this.collection.where("userId", "==", userId);
-        if (search) {
-            if (typeof search !== "string") {
-                throw new Error("Gunakan Huruf");
-            }
-            query = query.where("nama", ">=", search.toLowerCase())
-                        .where("nama", "<=", search.toLowerCase() + '\uf8ff');
+      console.log("getAllCategories params:", { userId, search, isPengeluaran }); // Log parameter
+      let query = this.collection.where("userId", "==", userId);
+      if (search && typeof search === "string" && search.trim() !== "") {
+        console.log("Search query value:", search); // Log nilai search
+        query = query.where("nama", ">=", search.toLowerCase())
+                    .where("nama", "<=", search.toLowerCase() + '\uf8ff');
+      } else if (search && typeof search !== "string") {
+        throw new Error("Gunakan Huruf");
+      }
+      if (isPengeluaran !== undefined && isPengeluaran !== null) {
+        query = query.where("isPengeluaran", "==", isPengeluaran);
+      }
+      const snapshot = await query.get();
+      console.log("Firestore snapshot size:", snapshot.size); // Log ukuran hasil query
+      if (snapshot.empty) {
+        return [];
+      }
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        if (!data.nama) {
+          console.warn(`Skipping document ${doc.id} due to missing 'nama' field`);
+          return null;
         }
-        if (isPengeluaran !== undefined && isPengeluaran !== null) {
-            query = query.where("isPengeluaran", "==", isPengeluaran);
-        }
-        const snapshot = await query.get();
-        if (snapshot.empty) {
-            return [];
-        }
-        return snapshot.docs.map((doc) => {
-            const data = doc.data();
-            if (!data.nama) {
-                console.warn(`Skipping document ${doc.id} due to missing 'nama' field`);
-                return null;
-            }
-            return {
-                id: doc.id,
-                nama: data.nama,
-                isPengeluaran: data.isPengeluaran ?? false,
-                userId: data.userId,
-                createdAt: data.createdAt?.toDate().toISOString(),
-                updatedAt: data.updatedAt?.toDate().toISOString(),
-            };
-        }).filter(item => item !== null);
+        return {
+          id: doc.id,
+          nama: data.nama,
+          isPengeluaran: data.isPengeluaran ?? false,
+          userId: data.userId,
+          createdAt: data.createdAt?.toDate().toISOString(),
+          updatedAt: data.updatedAt?.toDate().toISOString(),
+        };
+      }).filter(item => item !== null);
     } catch (error) {
-        throw new Error("Error fetching categories: " + error.message);
+      console.error("Detailed error in getAllCategories:", error.message, error.stack);
+      throw new Error("Error fetching categories: " + error.message);
     }
   }
 
@@ -110,30 +113,41 @@ class KategoriRepository {
     }
   }
 
+  
   async deleteCategory(id, userId) {
     try {
-      const docRef = this.collection.doc(id);
-      const snapshot = await docRef.get();
+        const docRef = this.collection.doc(id);
+        const snapshot = await docRef.get();
 
-      if (!snapshot.exists) {
-        throw new Error("Category not found");
-      }
+        if (!snapshot.exists) {
+            throw new Error("Category not found");
+        }
 
-      // Periksa apakah kategori milik user yang benar
-      const existingData = snapshot.data();
-      if (existingData.userId !== userId) {
-        throw new Error("Unauthorized: You can only delete your own categories");
-      }
+        const existingData = snapshot.data();
+        if (existingData.userId !== userId) {
+            throw new Error("Unauthorized: You can only delete your own categories");
+        }
+          // Tambahan: Cek apakah kategori digunakan dalam transaksi
+        const transaksiCheck = await this.db.collection("Transaksi")
+            .where("kategoriId", "==", id)
+            .where("userId", "==", userId)
+            .limit(1)
+            .get();
+        if (!transaksiCheck.empty) {
+            throw new Error("Category cannot be deleted as it is used in transactions");
+        }
 
-      await docRef.delete();
-      return { 
-        id: id, 
-        message: "Category deleted successfully" 
-      };
+        await docRef.delete();
+        return { 
+            id: id, 
+            message: "Category deleted successfully" 
+        };
     } catch (error) {
-      throw new Error("Error deleting category: " + error.message);
+        console.error("Error in KategoriRepository.deleteCategory:", error.message, error.stack);
+        throw new Error("Error deleting category: " + error.message);
     }
   }
+
 }
 
 module.exports = new KategoriRepository();
