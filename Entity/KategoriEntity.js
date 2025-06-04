@@ -11,6 +11,9 @@ class KategoriEntity {
         if (typeof this.isPengeluaran !== 'boolean') {
             missing.push("isPengeluaran");
         }
+        if(this.nama && /^\s*$/.test(this.nama.trim())) {
+            missing.push("nama tidak boleh hanya spasi atau berupa nomor");
+        }
         return missing;
     }
 
@@ -20,6 +23,9 @@ class KategoriEntity {
         if (!this.nama) missing.push("nama");
         if (typeof this.isPengeluaran !== 'boolean') {
             missing.push("isPengeluaran");
+        }
+        if(this.nama && /^\s*$/.test(this.nama.trim())) {
+            missing.push("nama tidak boleh hanya spasi atau berupa nomor");
         }
         return missing;
     }
