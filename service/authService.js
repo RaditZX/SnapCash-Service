@@ -57,8 +57,8 @@ class AuthService {
 
   async signUp(email, password, username, photo) {
     try {
-      if (!email || !password || !username) {
-        throw new Error("Email, password, and username are required");
+      if (!email || !password) {
+        throw new Error("Email and passwordare required");
       }
 
       const user = await createUserWithEmailAndPassword(auth, email, password);
@@ -67,7 +67,7 @@ class AuthService {
       const userEntityInstance = new userEntity({
         userId: user.user.uid,
         email,
-        username : " ",
+        username,
         foto: photo,
         currencyChoice: "IDR",
         limitOCR:{limit: 3, used: 0, resetDate: new Date()},
