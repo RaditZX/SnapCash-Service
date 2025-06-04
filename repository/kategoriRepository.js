@@ -9,41 +9,38 @@ class KategoriRepository {
 
   async getAllCategories(userId, search, isPengeluaran) {
     try {
-      console.log("getAllCategories params:", { userId, search, isPengeluaran }); // Log parameter
-      let query = this.collection.where("userId", "==", userId);
-      if (search && typeof search === "string" && search.trim() !== "") {
-        console.log("Search query value:", search); // Log nilai search
-        query = query.where("nama", ">=", search.toLowerCase())
-                    .where("nama", "<=", search.toLowerCase() + '\uf8ff');
-      } else if (search && typeof search !== "string") {
-        throw new Error("Gunakan Huruf");
-      }
-      if (isPengeluaran !== undefined && isPengeluaran !== null) {
-        query = query.where("isPengeluaran", "==", isPengeluaran);
-      }
-      const snapshot = await query.get();
-      console.log("Firestore snapshot size:", snapshot.size); // Log ukuran hasil query
-      if (snapshot.empty) {
-        return [];
-      }
-      return snapshot.docs.map((doc) => {
-        const data = doc.data();
-        if (!data.nama) {
-          console.warn(`Skipping document ${doc.id} due to missing 'nama' field`);
-          return null;
+        let query = this.collection.where("userId", "==", userId);
+        if (search) {
+            if (typeof search !== "string") {
+                throw new Error("Gunakan Huruf");
+            }
+            query = query.where("nama", ">=", search)
+                        .where("nama", "<=", search + '\uf8ff');
         }
-        return {
-          id: doc.id,
-          nama: data.nama,
-          isPengeluaran: data.isPengeluaran ?? false,
-          userId: data.userId,
-          createdAt: data.createdAt?.toDate().toISOString(),
-          updatedAt: data.updatedAt?.toDate().toISOString(),
-        };
-      }).filter(item => item !== null);
+        if (isPengeluaran !== undefined && isPengeluaran !== null) {
+            query = query.where("isPengeluaran", "==", isPengeluaran);
+        }
+        const snapshot = await query.get();
+        if (snapshot.empty) {
+            return [];
+        }
+        return snapshot.docs.map((doc) => {
+            const data = doc.data();
+            if (!data.nama) {
+                console.warn(`Skipping document ${doc.id} due to missing 'nama' field`);
+                return null;
+            }
+            return {
+                id: doc.id,
+                nama: data.nama,
+                isPengeluaran: data.isPengeluaran ?? false,
+                userId: data.userId,
+                createdAt: data.createdAt?.toDate().toISOString(),
+                updatedAt: data.updatedAt?.toDate().toISOString(),
+            };
+        }).filter(item => item !== null);
     } catch (error) {
-      console.error("Detailed error in getAllCategories:", error.message, error.stack);
-      throw new Error("Error fetching categories: " + error.message);
+        throw new Error("Error fetching categories: " + error.message);
     }
   }
 
