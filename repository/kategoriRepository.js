@@ -18,7 +18,7 @@ class KategoriRepository {
                         .where("nama", "<=", search + '\uf8ff');
         }
         if (isPengeluaran !== undefined && isPengeluaran !== null) {
-            query = query.where("isPengeluaran", "==", isPengeluaran);
+            query = query.where("isPengeluaran", "==", isPengeluaran && !isPengeluaran );
         }
         const snapshot = await query.get();
         if (snapshot.empty) {
