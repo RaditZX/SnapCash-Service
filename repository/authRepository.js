@@ -79,11 +79,13 @@ class authRepository {
 
   async createUser(user) {
     try {
-      const { email, userId } = user;
+      const { email, userId, limitOCR, username } = user;
 
       await this.db.collection("users").add({
         userId: userId,
         email: email,
+        username: username || "User_" + userId,
+        limitOCR: limitOCR,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -95,9 +97,32 @@ class authRepository {
   }
 
   async deleteUser(userId) {
-    await admin.auth().deleteUser(userId);
-    await this.db.collection("users").doc(userId).delete();
+    try {
+      // Hapus user dari Firebase Authentication
+      await admin.auth().deleteUser(userId);
+      
+      // Hapus dokumen user dari Firestore
+      await this.db.collection("users")
+        .where("userId", "==", userId)
+        .get()
+        .then((querySnapshot) => {
+          const batch = this.db.batch();
+          querySnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+          });
+          return batch.commit();
+        });
+
+
+      console.log(`User ${userId} successfully deleted.`);
+    } catch (error) {
+      console.error(`Failed to delete user ${userId}:`, error);
+      
+      // Melempar ulang error jika ingin ditangani di tempat pemanggilan
+      throw new Error(`Gagal menghapus user: ${error.message}`);
+    }
   }
+
 }
 
 module.exports = new authRepository();

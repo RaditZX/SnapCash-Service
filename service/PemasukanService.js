@@ -116,7 +116,7 @@ class PemasukanService {
       return newPemasukan;
     } catch (error) {
       console.error("Error adding pemasukan:", error);
-      throw new Error("Error adding pemasukan: " + error.message);
+      throw new Error(error.message);
     }
   }
 
@@ -126,7 +126,7 @@ class PemasukanService {
       const updatedPemasukan = await this.pemasukanRepository.updatePemasukan(id, updateData, userId);
       return updatedPemasukan;
     } catch (error) {
-      throw new Error("Error updating pemasukan: " + error.message);
+      throw new Error(error.message);
     }
   }
 
@@ -135,7 +135,7 @@ class PemasukanService {
       const deletedPemasukan = await this.pemasukanRepository.deletePemasukan(id, userId);
       return deletedPemasukan;
     } catch (error) {
-      throw new Error("Error deleting pemasukan: " + error.message);
+      throw new Error( error.message);
     }
   }
 

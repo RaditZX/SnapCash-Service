@@ -9,7 +9,7 @@ const cors = require("cors");
 
 const app = express();
 require('dotenv').config();
-// app.use(cors());
+app.use(cors());
 app.use(express.json({ limit: "50mb" }));  // Default biasanya 1MB, ubah ke 50MB
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -34,7 +34,9 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  console.error('Error occurred:', err.message, err.stack);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+
 });
 
 module.exports = app;

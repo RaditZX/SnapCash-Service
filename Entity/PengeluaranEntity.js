@@ -27,11 +27,14 @@ class PengeluaranEntity {
         if (!this.namaPengeluaran) missing.push("namaPengeluaran");
         if (!this.tanggal) missing.push("tanggal");
         if (!this.toko) missing.push("toko");
-        if (this.total === undefined || this.total === null) missing.push("total");
-        if (this.isPengeluaran === undefined || this.isPengeluaran === null) {
+        if (!this.total) missing.push("total");
+        if (!this.isPengeluaran) {
             missing.push("isPengeluaran");
         }
-        if (this.kategori === undefined || this.kategori === null) {
+        if ((!this.barang || this.barang.length === 0) && (!this.tambahanBiaya || this.tambahanBiaya.length === 0)) {
+            missing.push("Item or Cost")
+        }
+        if (!this.kategori) {
             missing.push("kategori");
         }
         return missing;

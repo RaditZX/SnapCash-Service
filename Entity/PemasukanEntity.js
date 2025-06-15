@@ -15,14 +15,14 @@ class PemasukanEntity {
         if (!this.namaPemasukan) missing.push("namaPemasukan");
         if (!this.tanggal) missing.push("tanggal");
         if (!this.sumber) missing.push("sumber");
-        if (this.total === undefined || this.total === null) missing.push("total");
-        if (this.isPengeluaran === undefined || this.isPengeluaran === null) {
+        if (!this.total) missing.push("total");
+        if (!this.isPengeluaran) {
             missing.push("isPengeluaran");
         }
-        if (this.kategori === undefined || this.kategori === null) {
+        if (!this.kategori) {
             missing.push("kategori");
         }
-        if(this.subTotal === undefined || this.subtotal === null) {
+        if(!this.subTotal) {
             missing.push("subtotal");
         }
         return missing;

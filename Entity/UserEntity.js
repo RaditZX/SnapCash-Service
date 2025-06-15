@@ -1,11 +1,12 @@
 class UserEntity {
-    constructor({ userId, email, username, foto, currencyChoice, no_hp, }) {
+    constructor({ userId, email, username, foto, currencyChoice, no_hp, limitOCR }) {
         this.userId = userId;
         this.email = email;
         this.username = username;
         this.foto = foto;
         this.currencyChoice = currencyChoice;
         this.no_hp = no_hp;
+        this.limitOCR = limitOCR;
     }
 
     // Fungsi untuk validasi field yang harus ada

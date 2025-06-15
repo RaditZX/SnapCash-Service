@@ -3,10 +3,10 @@ const { sendResponse } = require("../response");
 
 class AuthController {
   async signUp(req, res) {
-    const { email, password, username, photo } = req.body;
+    const { email, password, confirmPassword, photo } = req.body;
 
     try {
-      const result = await authService.signUp(email, password, username, photo);
+      const result = await authService.signUp(email, password, confirmPassword, photo);
       sendResponse(result.status, req.body, result.message, res, true);
     } catch (error) {
       console.error(error);
@@ -33,6 +33,18 @@ class AuthController {
       sendResponse(result.status, result.data, result.message, res, true);
     }
     catch (error) {
+      console.error(error);
+      sendResponse(400, req.body, error.message, res, false);
+    }
+  }
+
+  async resetPassword(req, res) {
+    const { email } = req.body;
+
+    try {
+      const result = await authService.resetPassword(email);
+      sendResponse(result.status, null, result.message, res, true);
+    } catch (error) {
       console.error(error);
       sendResponse(400, req.body, error.message, res, false);
     }
@@ -89,7 +101,7 @@ class AuthController {
 
     try {
       console.log("User ID:", user.uid);
-      const result = await authService.updateProfile(user,username, photo, currencyChoice, no_hp);
+      const result = await authService.updateProfile(user, username, photo, currencyChoice, no_hp);
       sendResponse(result.status, result.data, result.message, res, true);
     } catch (error) {
       console.error(error);
@@ -117,6 +129,20 @@ class AuthController {
     } catch (error) {
       console.error(error);
       sendResponse(400, req.body, error.message, res, false);
+    }
+  }
+
+  async deleteUserbyAdmin(req,res){
+    try{
+      const {id} = req.params
+      const { user } = req;
+
+      const result = await authService.deleteUserbyAdmin(id, user)
+      sendResponse(result.status, result.data, result.message, res, true);
+    }catch(error){
+      
+      console.error(error);
+      sendResponse(500, req.body, error.message, res, false);
     }
   }
 

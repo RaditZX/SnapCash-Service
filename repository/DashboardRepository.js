@@ -112,6 +112,7 @@ class DashboardRepository {
         .get();
 
       const groupedRegistrations = {};
+      let userReg = {};
       let totalUsers = 0;
 
       snapshot.forEach(doc => {
@@ -138,14 +139,18 @@ class DashboardRepository {
 
         if (!groupedRegistrations[key]) {
           groupedRegistrations[key] = 1;
+          userReg = [userData]; // langsung set array baru
         } else {
           groupedRegistrations[key]++;
+          userReg.push(userData); // langsung push karena pasti sudah ada
         }
+
       });
 
       return {
         totalUsers,
-        groupedRegistrations
+        groupedRegistrations,
+        userReg
       };
 
     } catch (error) {
@@ -156,8 +161,9 @@ class DashboardRepository {
 
   async getTotalEachKategori(jenis) {
     try {
-      console.log("Retrieving total count for each category in:", jenis.jenis);
-      const snapshot = await this.db.collection(jenis.jenis).get();
+      console.log("Retrieving total count for each category in:", jenis);
+      const snapshot = await this.db.collection(jenis).get();
+      
       const totalKategori = {};
 
       snapshot.forEach((doc) => {
@@ -165,7 +171,6 @@ class DashboardRepository {
         if (!data.tanggal || !data.kategori) return;
 
         const kategori = data.kategori;
-
         if (!totalKategori[kategori]) {
           totalKategori[kategori] = 0;
         }
