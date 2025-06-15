@@ -6,13 +6,10 @@ class KategoriController {
     async getAllCategories(req, res) {
         try {
         const userId = req.user.uid; // Sesuaikan dengan middleware
-        const { search, isPengeluaran } = req.query;
-        let parsedIsPengeluaran = null;
-        if (isPengeluaran === 'true') {
-            parsedIsPengeluaran = true;
-        } else if (isPengeluaran === 'false') {
-            parsedIsPengeluaran = false;
-        }
+        const { search } = req.query;
+        const isPengeluaran = req.query.isPengeluaran ?? 'true';
+        const parsedIsPengeluaran = isPengeluaran === 'true';
+
         console.log("getAllCategories request:", { userId, search, parsedIsPengeluaran });
 
         const categories = await kategoriService.getAllCategories(userId, search, parsedIsPengeluaran);

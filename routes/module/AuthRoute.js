@@ -10,6 +10,7 @@ module.exports = (router) => {
     // Sign in an existing user
     router.post("/signin", AuthController.signIn);
     router.post("/signinAdmin", AuthController.signInAdmin);
+    router.post("/resetPassword", AuthController.resetPassword);
     
     // Sign out the current user
     router.post("/signout", AuthController.signOut);
@@ -22,5 +23,6 @@ module.exports = (router) => {
     router.get("/getAllUsers", verifyFirebaseToken, AuthController.getAllUsers);
     router.put("/updateProfile",upload.single('photo'), verifyFirebaseToken, AuthController.updateProfile);
     router.get("/getUser", verifyFirebaseToken, AuthController.getUserData);
+    router.delete("/user/delete/:id",verifyFirebaseToken, AuthController.deleteUserbyAdmin)
     
 }

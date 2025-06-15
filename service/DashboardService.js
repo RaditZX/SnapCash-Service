@@ -56,11 +56,9 @@ class DashboardService {
             groupBy: mapGroup(userRegistration),
           });
 
-          const jenis = req.query.jenis || "Pemasukan";
+          const jenis = req.query.jenis || "Pengeluaran";
 
-          const totalEachKategori = await DashboardRepository.getTotalEachKategori({
-            jenis,
-          });
+          const totalEachKategori = await DashboardRepository.getTotalEachKategori(jenis);
 
           return sendResponse(200, {
             userRegistrationData,

@@ -27,7 +27,7 @@ class PengeluaranController {
       sendResponse(
         500,
         req.body,
-        "Error retrieving pengeluaran: " + error.message,
+         error.message,
         res
       );
     }
@@ -43,9 +43,9 @@ class PengeluaranController {
     } catch (error) {
       console.error(error);
       sendResponse(
-        500,
+        error.status || 500,
         req.body,
-        "Error retrieving pengeluaran: " + error.message,
+         error.message,
         res
       );
     }
@@ -59,12 +59,12 @@ class PengeluaranController {
         userId
       );
 
-      sendResponse(200, result, "Data successfully added", res, true);
+      sendResponse(200, result, "Outcome data successfully added", res, true);
     } catch (error) {
       sendResponse(
-        500,
+        error.status || 500,
         req.body,
-        "Error adding pengeluaran service: " + error.message,
+         error.message,
         res
       );
     }
@@ -80,12 +80,12 @@ class PengeluaranController {
         userId 
       );
 
-      sendResponse(200, result, "Data successfully updated", res, true);
+      sendResponse(200, result, "Outcome data successfully updated", res, true);
     } catch (error) {
       sendResponse(
         500,
         req.body,
-        "Error updating pengeluaran service: " + error.message,
+         error.message,
         res
       );
     }
@@ -111,13 +111,13 @@ class PengeluaranController {
         );
       }
 
-      sendResponse(200, result, "Pengeluaran berhasil dihapus", res, true);
+      sendResponse(200, result, "Outcome data successfully deleted", res, true);
     } catch (error) {
       console.error(error);
       sendResponse(
         500,
         req.body,
-        "Gagal menghapus pengeluaran: " + error.message,
+         error.message,
         res
       );
     }
@@ -134,7 +134,7 @@ class PengeluaranController {
       sendResponse(
         500,
         req.body,
-        "Error adding pengeluaran: " + error.message,
+         error.message,
         res
       );
     }

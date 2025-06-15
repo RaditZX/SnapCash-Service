@@ -22,7 +22,7 @@ class PemasukanController {
       }
       sendResponse(200, result, "Data successfully retrieved", res, true);
     } catch (error) {
-      sendResponse(500, req.body, "Error retrieving pemasukan: " + error.message, res);
+      sendResponse(500, req.body, error.message, res);
     }
   }
 
@@ -41,7 +41,7 @@ class PemasukanController {
       }
       sendResponse(200, result, "Data successfully retrieved", res, true);
     } catch (error) {
-      sendResponse(500, req.body, "Error retrieving pemasukan: " + error.message, res);
+      sendResponse(500, req.body, error.message, res);
     }
   }
 
@@ -49,9 +49,9 @@ class PemasukanController {
     try {
       const userId = await auth.getUserAuthenticate(req.user);
       const newPemasukan = await pemasukanService.addPemasukan(req.body, userId);
-      sendResponse(200, newPemasukan, "Data successfully added", res, true);
+      sendResponse(200, newPemasukan, "Income Data successfully added", res, true);
     } catch (error) {
-      sendResponse(500, req.body, "Error adding pemasukan: " + error.message, res);
+      sendResponse(500, req.body, error.message, res);
     }
   }
 
@@ -61,9 +61,9 @@ class PemasukanController {
       const userId = await auth.getUserAuthenticate(req.user);
       const updateData = req.body;
       const updatedPemasukan = await pemasukanService.updatePemasukan(id, updateData, userId);
-      sendResponse(200, updatedPemasukan, "Data successfully updated", res, true);
+      sendResponse(200, updatedPemasukan, "Income Data successfully updated", res, true);
     } catch (error) {
-      sendResponse(500, req.body, "Error updating pemasukan: " + error.message, res);
+      sendResponse(500, req.body, error.message, res);
     }
   }
 
@@ -72,9 +72,9 @@ class PemasukanController {
       const { id } = req.params;
       const userId = await auth.getUserAuthenticate(req.user);
       const deletedPemasukan = await pemasukanService.deletePemasukan(id, userId);
-      sendResponse(200, deletedPemasukan, "Pemasukan successfully deleted", res, true);
+      sendResponse(200, deletedPemasukan, "Income Data successfully deleted", res, true);
     } catch (error) {
-      sendResponse(500, req.body, "Error deleting pemasukan: " + error.message, res);
+      sendResponse(500, req.body, error.message, res);
     }
   }
 
@@ -84,7 +84,7 @@ class PemasukanController {
       const newPemasukan = await pemasukanService.addPemasukanByGPT(req.body, user.uid);
       sendResponse(200, newPemasukan, "Data successfully added", res, true);
     } catch (error) {
-      sendResponse(500, req.body, "Error adding pemasukan: " + error.message, res);
+      sendResponse(500, req.body, error.message, res);
     }
   }
 }

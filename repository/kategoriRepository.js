@@ -60,6 +60,16 @@ class KategoriRepository {
 
   async addCategory(category, userId) {
     try {
+
+      const duplicateCheck = await this.collection
+        .where('nama', '==', category.nama)
+        .where('userId', '==', userId)
+        .get();
+
+      if (!duplicateCheck.empty) {
+        throw new Error(`Kategori dengan nama "${category.nama}" sudah ada untuk user ini.`);
+      }
+
       const docRef = this.collection.doc();
       const data = {
         ...category,
@@ -75,12 +85,22 @@ class KategoriRepository {
         ...data
       };
     } catch (error) {
-      throw new Error("Error adding category: " + error.message);
+      throw new Error(error.message);
     }
   }
 
   async updateCategory(id, category, userId) {
     try {
+      
+      const duplicateCheck = await this.collection
+        .where('nama', '==', category.nama)
+        .where('userId', '==', userId)
+        .get();
+
+      if (!duplicateCheck.empty) {
+        throw new Error(`Kategori dengan nama "${category.nama}" sudah ada untuk user ini.`);
+      }
+
       const docRef = this.collection.doc(id);
       const doc = await docRef.get();
       
@@ -106,7 +126,7 @@ class KategoriRepository {
       const updatedDoc = await docRef.get();
       return { id: docRef.id, ...updatedDoc.data() };
     } catch (error) {
-      throw new Error("Error updating category: " + error.message);
+      throw new Error(error.message);
     }
   }
 
@@ -141,7 +161,7 @@ class KategoriRepository {
         };
     } catch (error) {
         console.error("Error in KategoriRepository.deleteCategory:", error.message, error.stack);
-        throw new Error("Error deleting category: " + error.message);
+        throw new Error( error.message);
     }
   }
 

@@ -9,7 +9,7 @@ const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
 const userEntity = require("../Entity/UserEntity");
 const authRepository = require("../repository/authRepository");
-const currencyRepository = require("../repository/currencyRepository");
+const {sendResetPasswordEmail} = require("../nodemailer")
 const { firebaseService } = require("./firebaseService");
 const firebases = new firebaseService();
 const sharp = require("sharp");
@@ -55,10 +55,19 @@ class AuthService {
     }
   };
 
-  async signUp(email, password, username, photo) {
+  async signUp(email, password, confirmPassword, photo) {
     try {
-      if (!email || !password || !username) {
-        throw new Error("Email, password, and username are required");
+      // Basic input validation
+      if (!email || !password || !confirmPassword) {
+        throw new Error("Please fill in email, password, and confirm password.");
+      }
+
+      if (confirmPassword !== password) {
+        throw new Error("Make sure the password and confirm password match.");
+      }
+
+      if (password.length < 6) {
+        throw new Error("Password must be at least 6 characters long.");
       }
 
       const user = await createUserWithEmailAndPassword(auth, email, password);
@@ -67,59 +76,105 @@ class AuthService {
       const userEntityInstance = new userEntity({
         userId: user.user.uid,
         email,
-        username : " ",
         foto: photo,
         currencyChoice: "IDR",
-        limitOCR:{limit: 3, used: 0, resetDate: new Date()},
+        limitOCR: { limit: 3, used: 0, resetDate: new Date() },
       });
 
-      await authRepository.createUser(userEntityInstance);
+      authRepository.createUser(userEntityInstance);
 
       return {
         status: 202,
-        message:
-          "Verification email sent. Please verify your email before logging in.",
+        message: "Verification email has been sent. Please check your inbox to verify your account.",
       };
     } catch (error) {
       console.error(error);
-      throw error;
+
+      // Handle common Firebase errors
+      if (error.code === "auth/email-already-in-use") {
+        throw new Error("This email is already registered. Please use a different one or log in.");
+      } else if (error.code === "auth/invalid-email") {
+        throw new Error("Invalid email format. Please check and try again.");
+      } else if (error.code === "auth/weak-password") {
+        throw new Error("Password is too weak. Use at least 6 characters.");
+      }
+
+      // Default error
+      throw new Error(error.message || "An error occurred during registration.");
     }
   }
+
 
   async signIn(email, password) {
     try {
       if (!email || !password) {
-        throw new Error("Email and password are required");
+        throw new Error("Please enter your email and password.");
       }
 
-      const isEmailVerified = await getUserVerificationStatusByEmail(email);
+      // Attempt to sign in
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      if (isEmailVerified) {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        await updateLimitOCR(userCredential.user.uid);
-        return {
-          status: 200,
-          data: { userCredential },
-          message: "Login Successful",
-        };
-      } else {
-        await sendEmailVerificationLink();
+      if (!userCredential.user.emailVerified) {
+        await sendEmailVerificationLink(email);
         return {
           status: 403,
           message:
-            "Please verify your email before logging in. We have resent the verification email.",
+            "Your email has not been verified. We have re-sent the verification email. Please check your inbox.",
         };
       }
+
+      // Optionally update OCR limit in the background
+      updateLimitOCR(userCredential.user.uid); // no await for faster response
+
+      return {
+        status: 200,
+        data: { userCredential },
+        message: "Login successful. Welcome back!",
+      };
     } catch (error) {
       console.error(error);
-      throw error;
+
+      if (error.code === "auth/user-not-found") {
+        throw new Error("Email not found. Please register first.");
+      } else if (error.code === "auth/wrong-password") {
+        throw new Error("Incorrect password. Please try again.");
+      } else if (error.code === "auth/invalid-email") {
+        throw new Error("Invalid email format.");
+      }
+
+      throw new Error(error.message || "An error occurred during login.");
     }
   }
 
+
+
+  async resetPassword(email) {
+    try {
+      if (!email) {
+        throw new Error("Email is required to reset password");
+      }
+      const userRecord = await admin.auth().getUserByEmail(email);
+      if (!userRecord) {
+        throw new Error("User not found with the provided email");
+      }
+      await sendResetPasswordEmail(email)
+      return {
+        status: 200,
+        message: "Password reset link has been sent to your email",
+      };
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      if (error.code === "auth/user-not-found") {
+        throw new Error("User not found with the provided email");
+      }
+      if (error.code === "auth/invalid-email") {
+        throw new Error("Invalid email format");
+      }
+      throw new Error(error.message || "Failed to send password reset link");
+    }
+  }
+
+  
   async signInAdmin(email, password) {
     try {
       if (!email || !password) {
@@ -199,12 +254,24 @@ class AuthService {
         const userEntityInstance = new userEntity({
           userId: user.uid,
           email: user.email,
+          username: user.displayName || "User",
           currencyChoice: "IDR",
-          limitOCR:{limit: 3, used: 0, resetDate: new Date()},
+          limitOCR: {
+            limit: 3,
+            used: 0,
+            resetDate: new Date()
+          },
         });
 
-        await authRepository.createUser(userEntityInstance);
+        const createdUser = await authRepository.createUser(userEntityInstance);
+
+        if (!createdUser || !createdUser.userId) {
+          throw new Error("Gagal menambahkan user ke database.");
+        }
+
+        console.log("User berhasil ditambahkan:", createdUser);
       }
+
 
       // Return successful response
       return {
@@ -241,7 +308,7 @@ class AuthService {
 
   async updateProfile(user, username, photo, currencyChoice, no_hp) {
     try {
-           let photoUrl
+      let photoUrl
       if (photo) {
         const buffer = Buffer.from(photo); // Konversi dari ArrayBuffer ke Buffer
 
@@ -252,7 +319,7 @@ class AuthService {
         photoUrl = photo;
         if (compressedImage) {
           const url = await firebases.uploadImageToFirebase(compressedImage, {
-            fileName :`profile/${user.uid}-${Date.now()}.jpg`,
+            fileName: `profile/${user.uid}-${Date.now()}.jpg`,
             mimetype: "image/jpeg",
           });
           if (!url) {
@@ -343,7 +410,7 @@ class AuthService {
     }
   }
 
-  async getAllUsers(_user){
+  async getAllUsers(_user) {
     try {
       const user = await getUserDatas(_user.uid);
       if (!user.data || !user.data.role || user.data.role !== "admin") {
@@ -369,25 +436,49 @@ class AuthService {
       throw error;
     }
   }
-    
+
+async deleteUserbyAdmin(id, user) {
+  try {
+    const users = await getUserDatas(user.uid);
+    if (!users.data || !users.data.role || users.data.role !== "admin") {
+      return {
+        status: 403,
+        message: "Access denied. You are not an admin.",
+      };
+    }
+
+    const deletedUser = await authRepository.deleteUser(id);
+
+    return {
+      data: deletedUser,
+      status: 200,
+      message: "User successfully deleted",
+    };
+  } catch (error) {
+    throw error;
+  }
 }
 
-  const getUserDatas = async (userId) => {
-    try {
-      const user = await authRepository.getUserById(userId);
-      if (!user) {
-        throw new Error("User not found");
-      }
-      return {
-        status: 200,
-        data: user,
-        message: "User data retrieved successfully",
-      };
-    } catch (error) {
-      console.error(error);
-      throw error;
+
+}
+
+
+const getUserDatas = async (userId) => {
+  try {
+    const user = await authRepository.getUserById(userId);
+    if (!user) {
+      throw new Error("User not found");
     }
+    return {
+      status: 200,
+      data: user,
+      message: "User data retrieved successfully",
+    };
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
+}
 
 const updateLimitOCR = async (userId) => {
   try {
@@ -404,16 +495,17 @@ const updateLimitOCR = async (userId) => {
       limitOCR.resetDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // Reset after 24 hours
       await authRepository.updateUser(userId, { limitOCR });
       return {
-      status: 200,
-      data: limitOCR,
-      message: "Limit OCR updated successfully",
-    };
+        status: 200,
+        data: limitOCR,
+        message: "Limit OCR updated successfully",
+      };
     }
     return;
   } catch (error) {
     console.error(error);
     throw error;
   }
+  
 
 
 }

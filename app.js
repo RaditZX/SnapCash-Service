@@ -34,7 +34,9 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  console.error('Error occurred:', err.message, err.stack);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+
 });
 
 module.exports = app;
