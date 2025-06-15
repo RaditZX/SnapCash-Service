@@ -1,39 +1,106 @@
-const currencyRepository = require("../repository/currencyRepository");
-const currencyEntity = require("../Entity/currencyEntity");
+const AuthService = require("../service/authService");
 
-class CurrencyService {
-  constructor() {
-    this.currencyRepository = currencyRepository;
-    this.currencyEntity = currencyEntity;
+class AuthController {
+  async signUp(req, res) {
+    try {
+      const { email, password, username, photo } = req.body;
+      const result = await AuthService.signUp(email, password, username, photo);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
+    }
   }
-    async getCurrency(userId) {
-        const result = await this.currencyRepository.getCurrency(userId);
-        return result;
+
+  async signIn(req, res) {
+    try {
+      const { email, password } = req.body;
+      const result = await AuthService.signIn(email, password);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
     }
-    async getCurrencyById(id, userId) {
-        const result = await this.currencyRepository.getCurrencyById(id, userId);
-        return result;
+  }
+
+  async signInAdmin(req, res) {
+    try {
+      const { email, password } = req.body;
+      const result = await AuthService.signInAdmin(email, password);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
     }
-    async addCurrency(currencyData, userId) {
-        const currency = new this.currencyEntity(currencyData);
-        const missingFields = currency.validateFields();
-        if (missingFields.length > 0) {
-            throw new Error(`All fields are required. Missing: ${missingFields.join(", ")}`);
-        }
-        return await this.currencyRepository.addCurrency(currency.getFilledFields(), userId);
+  }
+
+  async signOut(req, res) {
+    try {
+      const result = await AuthService.signOut();
+      res.status(result.status).json({ message: result.message });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
     }
-    async updateCurrency(id, currencyData, userId) {
-        const currency = new this.currencyEntity(currencyData);
-        if (!currency.hasAnyValue()) {
-            throw new Error("Minimal satu field harus diisi untuk melakukan update.");
-        }
-        return await this.currencyRepository.updateCurrency(id, currency.getFilledFields(), userId);
+  }
+
+  async signInWithGoogle(req, res) {
+    try {
+      const user = req.user; // From verifyFirebaseToken middleware
+      const result = await AuthService.signInWithGoogle(user);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
     }
-    async deleteCurrency(id, userId) {
-        return await this.currencyRepository.deleteCurrency(id, userId);
+  }
+
+  async signInWithGoogleAdmin(req, res) {
+    try {
+      const user = req.user; // From verifyFirebaseToken middleware
+      const result = await AuthService.signInWithGoogleAdmin(user);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
     }
+  }
+
+  async registerWithGoogle(req, res) {
+    try {
+      const user = req.user; // From verifyFirebaseToken middleware
+      const result = await AuthService.registerWithGoogle(user);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
+    }
+  }
+
+  async getAllUsers(req, res) {
+    try {
+      const user = req.user; // From verifyFirebaseToken middleware
+      const result = await AuthService.getAllUsers(user);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
+    }
+  }
+
+  async updateProfile(req, res) {
+    try {
+      const user = req.user; // From verifyFirebaseToken middleware
+      const { username, currencyChoice, no_hp } = req.body;
+      const photo = req.file ? req.file.buffer.toString("base64") : null;
+      const result = await AuthService.updateProfile(user, username, photo, currencyChoice, no_hp);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
+    }
+  }
+
+  async getUserData(req, res) {
+    try {
+      const userId = req.user?.uid; // From verifyFirebaseToken middleware
+      const result = await AuthService.getUserData(userId);
+      res.status(result.status).json({ message: result.message, data: result.data });
+    } catch (error) {
+      res.status(error.status || 500).json({ message: error.message || "Server error" });
+    }
+  }
 }
 
-module.exports = new CurrencyService();
-
-  
+module.exports = new AuthController();
