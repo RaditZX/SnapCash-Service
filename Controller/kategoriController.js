@@ -7,8 +7,8 @@ class KategoriController {
         try {
         const userId = req.user.uid; // Sesuaikan dengan middleware
         const { search } = req.query;
-        const isPengeluaran = req.query.isPengeluaran ?? 'true';
-        const parsedIsPengeluaran = isPengeluaran === 'true';
+        const isPengeluaran = req.query.isPengeluaran ?? 'null';
+        const parsedIsPengeluaran = isPengeluaran === 'null';
 
         console.log("getAllCategories request:", { userId, search, parsedIsPengeluaran });
 
@@ -44,11 +44,15 @@ class KategoriController {
 
     async addCategory(req, res) {
         try {
-        const userId = await auth.getUserAuthenticate(req.user);
-        const newCategory = await kategoriService.addCategory(req.body, userId);
-        sendResponse(201, newCategory, "Category successfully added", res, true);
+            const userId = await auth.getUserAuthenticate(req.user);
+            const newCategory = await kategoriService.addCategory(req.body, userId);
+            sendResponse(201, newCategory, "Category successfully added", res, true);
         } catch (error) {
-        sendResponse(500, req.body, "Error adding category: " + error.message, res);
+            if (error.message.includes("Kategori dengan nama")) {
+                sendResponse(409, req.body, error.message, res, false); 
+            } else {
+                sendResponse(500, req.body, "Error adding category: " + error.message, res, false);
+            }
         }
     }
 
@@ -62,7 +66,11 @@ class KategoriController {
         }
         sendResponse(200, updatedCategory, "Category successfully updated", res, true);
         } catch (error) {
-        sendResponse(500, req.body, "Error updating category: " + error.message, res);
+        if (error.message.includes("Kategori dengan nama")) {
+                sendResponse(409, req.body, error.message, res, false);
+            } else {
+                sendResponse(500, req.body, "Error updating category: " + error.message, res, false);
+            }
         }
     }
 
