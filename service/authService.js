@@ -13,26 +13,26 @@ const firebases = new firebaseService();
 const MESSAGES = {
   SUCCESS: {
     REGISTRATION: "Registration successful! Verify your email.",
-    LOGIN: "Login successful!",
-    ADMIN_LOGIN: "Admin login successful!",
-    LOGOUT: "Signed out successfully!",
+    LOGIN: "Login successful!, Wlocome back!",
+    ADMIN_LOGIN: "Admin login successful!, Welcome back, Admin!",
+    LOGOUT: "Signed out successfully!, See you next time!",
     PROFILE_UPDATE: "Profile updated!",
     USER_DATA: "User data retrieved.",
     USERS: "All users retrieved.",
     LIMIT_RESET: "Daily OCR limit reset.",
-    PASSWORD_RESET: "Password reset link sent.",
+    PASSWORD_RESET: "Password reset link sent. Check your email.",
     USER_DELETED: "User deleted successfully.",
   },
   ERROR: {
     MISSING_FIELDS: "All fields are required.",
-    INVALID_CREDENTIALS: "Invalid email or password.",
-    EMAIL_NOT_VERIFIED: "Please verify your email.",
-    USER_NOT_FOUND: "User not found.",
+    INVALID_CREDENTIALS: "Invalid email or password. Please try again.",
+    EMAIL_NOT_VERIFIED: "Please verify your email. Check your inbox.",
+    USER_NOT_FOUND: "User not found. Please sign up.",
     ACCESS_DENIED: "Admin access required.",
     NOT_AUTHENTICATED: "Please sign in.",
-    UPLOAD_FAILED: "Failed to upload image.",
+    UPLOAD_FAILED: "Failed to upload image. Please try again.",
     NO_CHANGES: "No changes to update.",
-    INVALID_EMAIL: "Invalid email format.",
+    INVALID_EMAIL: "Invalid email format. Please enter a valid email.",
     PASSWORD_MISMATCH: "Passwords do not match.",
     WEAK_PASSWORD: "Password too short (min 6 characters).",
     EMAIL_IN_USE: "Email already in use.",
@@ -63,7 +63,7 @@ const sendVerificationEmail = async (user) => {
     throw new Error(MESSAGES.ERROR.GENERAL);
   }
 };
-
+ 
 class AuthService {
   async signUp(email, password, confirmPassword, photo) {
     try {
