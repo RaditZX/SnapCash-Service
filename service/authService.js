@@ -1,514 +1,335 @@
-const {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  sendEmailVerification,
-} = require("firebase/auth");
+const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } = require("firebase/auth");
 const firebase = require("../firebase-client");
 const admin = require("../firebase-service");
 const userEntity = require("../Entity/UserEntity");
 const authRepository = require("../repository/authRepository");
-const {sendResetPasswordEmail} = require("../nodemailer")
+const { sendResetPasswordEmail } = require("../nodemailer");
 const { firebaseService } = require("./firebaseService");
-const firebases = new firebaseService();
 const sharp = require("sharp");
 
 const auth = getAuth(firebase);
+const firebases = new firebaseService();
 
-// Fetch user verification status by email
-const getUserVerificationStatusByEmail = async (email) => {
-  try {
-    const userRecord = await admin.auth().getUserByEmail(email);
-    return userRecord.emailVerified;
-  } catch (error) {
-    console.error("Error fetching user verification status:", error);
-    throw error;
-  }
+const MESSAGES = {
+  SUCCESS: {
+    REGISTRATION: "Registration successful! Verify your email.",
+    LOGIN: "Login successful!, Wlocome back!",
+    ADMIN_LOGIN: "Admin login successful!, Welcome back, Admin!",
+    LOGOUT: "Signed out successfully!, See you next time!",
+    PROFILE_UPDATE: "Profile updated!",
+    USER_DATA: "User data retrieved.",
+    USERS: "All users retrieved.",
+    LIMIT_RESET: "Daily OCR limit reset.",
+    PASSWORD_RESET: "Password reset link sent. Check your email.",
+    USER_DELETED: "User deleted successfully.",
+  },
+  ERROR: {
+    MISSING_FIELDS: "All fields are required.",
+    INVALID_CREDENTIALS: "Invalid email or password. Please try again.",
+    EMAIL_NOT_VERIFIED: "Please verify your email. Check your inbox.",
+    USER_NOT_FOUND: "User not found. Please sign up.",
+    ACCESS_DENIED: "Admin access required.",
+    NOT_AUTHENTICATED: "Please sign in.",
+    UPLOAD_FAILED: "Failed to upload image. Please try again.",
+    NO_CHANGES: "No changes to update.",
+    INVALID_EMAIL: "Invalid email format. Please enter a valid email.",
+    PASSWORD_MISMATCH: "Passwords do not match.",
+    WEAK_PASSWORD: "Password too short (min 6 characters).",
+    EMAIL_IN_USE: "Email already in use.",
+    INVALID_GOOGLE_DATA: "Invalid Google user data.",
+    GENERAL: "Something went wrong.",
+  },
 };
 
-// Send email verification link
-const sendEmailVerificationLink = async (email) => {
-  try {
-    const auth = getAuth();
-    await sendEmailVerification(auth.currentUser);
-    console.log("Verification email sent successfully.");
-  } catch (error) {
-    console.error("Error sending verification email:", error);
-    throw error;
-  }
+const STATUS_CODES = {
+  OK: 200,
+  CREATED: 201,
+  ACCEPTED: 202,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  SERVER_ERROR: 500,
 };
 
+const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validatePassword = (password) => password?.length >= 6;
+
+const sendVerificationEmail = async (user) => {
+  try {
+    await sendEmailVerification(user);
+  } catch (error) {
+    console.error("Verification email failed:", error);
+    throw new Error(MESSAGES.ERROR.GENERAL);
+  }
+};
+ 
 class AuthService {
-  getUserAuthenticate = async (user) => {
-    try {
-      const userId = user.uid;
-
-      if (!userId) {
-        throw new Error("User not authenticated");
-      }
-
-      return userId;
-    } catch (error) {
-      console.error(error);
-      throw new Error("User not authenticated", error);
-    }
-  };
-
   async signUp(email, password, confirmPassword, photo) {
     try {
-      // Basic input validation
-      if (!email || !password || !confirmPassword) {
-        throw new Error("Please fill in email, password, and confirm password.");
-      }
+      if (!email || !password || !confirmPassword) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.MISSING_FIELDS };
+      if (!validateEmail(email)) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+      if (!validatePassword(password)) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.WEAK_PASSWORD };
+      if (password !== confirmPassword) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.PASSWORD_MISMATCH };
 
-      if (confirmPassword !== password) {
-        throw new Error("Make sure the password and confirm password match.");
-      }
+      const existingUser = await authRepository.getUserByEmail(email);
+      if (existingUser) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.EMAIL_IN_USE };
 
-      if (password.length < 6) {
-        throw new Error("Password must be at least 6 characters long.");
-      }
+      const { user } = await createUserWithEmailAndPassword(auth, email, password);
+      await sendVerificationEmail(user);
 
-      const user = await createUserWithEmailAndPassword(auth, email, password);
-      await sendEmailVerificationLink(email);
-
-      const userEntityInstance = new userEntity({
-        userId: user.user.uid,
+      const userData = new userEntity({
+        userId: user.uid,
         email,
-        foto: photo,
+        foto: photo || null,
         currencyChoice: "IDR",
         limitOCR: { limit: 3, used: 0, resetDate: new Date() },
       });
 
-      authRepository.createUser(userEntityInstance);
+      await authRepository.createUser(userData);
 
-      return {
-        status: 202,
-        message: "Verification email has been sent. Please check your inbox to verify your account.",
-      };
+      return { status: STATUS_CODES.ACCEPTED, message: MESSAGES.SUCCESS.REGISTRATION, data: { userId: user.uid, email } };
     } catch (error) {
-      console.error(error);
-
-      // Handle common Firebase errors
-      if (error.code === "auth/email-already-in-use") {
-        throw new Error("This email is already registered. Please use a different one or log in.");
-      } else if (error.code === "auth/invalid-email") {
-        throw new Error("Invalid email format. Please check and try again.");
-      } else if (error.code === "auth/weak-password") {
-        throw new Error("Password is too weak. Use at least 6 characters.");
-      }
-
-      // Default error
-      throw new Error(error.message || "An error occurred during registration.");
+      console.error("Sign-up error:", error);
+      if (error.code === "auth/email-already-in-use") return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.EMAIL_IN_USE };
+      if (error.code === "auth/invalid-email") return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+      if (error.code === "auth/weak-password") return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.WEAK_PASSWORD };
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
-
 
   async signIn(email, password) {
     try {
-      if (!email || !password) {
-        throw new Error("Please enter your email and password.");
+      if (!email || !password) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.MISSING_FIELDS };
+      if (!validateEmail(email)) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+
+      const userRecord = await admin.auth().getUserByEmail(email);
+      if (!userRecord.emailVerified) {
+        await sendVerificationEmail(auth.currentUser);
+        return { status: STATUS_CODES.FORBIDDEN, message: MESSAGES.ERROR.EMAIL_NOT_VERIFIED };
       }
 
-      // Attempt to sign in
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      await this.updateLimitOCR(user.uid);
 
-      if (!userCredential.user.emailVerified) {
-        await sendEmailVerificationLink(email);
-        return {
-          status: 403,
-          message:
-            "Your email has not been verified. We have re-sent the verification email. Please check your inbox.",
-        };
-      }
-
-      // Optionally update OCR limit in the background
-      updateLimitOCR(userCredential.user.uid); // no await for faster response
-
-      return {
-        status: 200,
-        data: { userCredential },
-        message: "Login successful. Welcome back!",
-      };
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.LOGIN, data: { userId: user.uid, email } };
     } catch (error) {
-      console.error(error);
-
-      if (error.code === "auth/user-not-found") {
-        throw new Error("Email not found. Please register first.");
-      } else if (error.code === "auth/wrong-password") {
-        throw new Error("Incorrect password. Please try again.");
-      } else if (error.code === "auth/invalid-email") {
-        throw new Error("Invalid email format.");
-      }
-
-      throw new Error(error.message || "An error occurred during login.");
+      console.error("Sign-in error:", error);
+      if (error.code === "auth/user-not-found") return { status: STATUS_CODES.NOT_FOUND, message: MESSAGES.ERROR.USER_NOT_FOUND };
+      if (error.code === "auth/wrong-password") return { status: STATUS_CODES.UNAUTHORIZED, message: MESSAGES.ERROR.INVALID_CREDENTIALS };
+      if (error.code === "auth/invalid-email") return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
-
-
 
   async resetPassword(email) {
     try {
-      if (!email) {
-        throw new Error("Email is required to reset password");
-      }
-      const userRecord = await admin.auth().getUserByEmail(email);
-      if (!userRecord) {
-        throw new Error("User not found with the provided email");
-      }
-      await sendResetPasswordEmail(email)
-      return {
-        status: 200,
-        message: "Password reset link has been sent to your email",
-      };
+      if (!email) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.MISSING_FIELDS };
+      if (!validateEmail(email)) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+
+      await admin.auth().getUserByEmail(email); // Check if user exists
+      await sendResetPasswordEmail(email);
+
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.PASSWORD_RESET };
     } catch (error) {
-      console.error("Error resetting password:", error);
-      if (error.code === "auth/user-not-found") {
-        throw new Error("User not found with the provided email");
-      }
-      if (error.code === "auth/invalid-email") {
-        throw new Error("Invalid email format");
-      }
-      throw new Error(error.message || "Failed to send password reset link");
+      console.error("Reset password error:", error);
+      if (error.code === "auth/user-not-found") return { status: STATUS_CODES.NOT_FOUND, message: MESSAGES.ERROR.USER_NOT_FOUND };
+      if (error.code === "auth/invalid-email") return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
-  
   async signInAdmin(email, password) {
     try {
-      if (!email || !password) {
-        throw new Error("Email and password are required");
+      if (!email || !password) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.MISSING_FIELDS };
+      if (!validateEmail(email)) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+
+      const userRecord = await admin.auth().getUserByEmail(email);
+      if (!userRecord.emailVerified) {
+        await sendVerificationEmail(auth.currentUser);
+        return { status: STATUS_CODES.FORBIDDEN, message: MESSAGES.ERROR.EMAIL_NOT_VERIFIED };
       }
 
-      const isEmailVerified = await getUserVerificationStatusByEmail(email);
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      const userData = await authRepository.getUserById(user.uid);
+      if (!userData || userData.role !== "admin") return { status: STATUS_CODES.FORBIDDEN, message: MESSAGES.ERROR.ACCESS_DENIED };
 
-      if (isEmailVerified) {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-
-        // Check if the user is an admin
-        const user = await authRepository.getUserById(userCredential.user.uid);
-        if (user && user.role === "admin") {
-          return {
-            status: 200,
-            data: { userCredential },
-            message: "Admin login successful",
-          };
-        } else {
-          return {
-            status: 403,
-            message: "Access denied. You are not an admin.",
-          };
-        }
-      } else {
-        await sendEmailVerificationLink();
-        return {
-          status: 403,
-          message:
-            "Please verify your email before logging in. We have resent the verification email.",
-        };
-      }
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.ADMIN_LOGIN, data: { userId: user.uid, email, role: userData.role } };
     } catch (error) {
-      console.error(error);
-      throw error;
+      console.error("Admin sign-in error:", error);
+      if (error.code === "auth/user-not-found") return { status: STATUS_CODES.NOT_FOUND, message: MESSAGES.ERROR.USER_NOT_FOUND };
+      if (error.code === "auth/wrong-password") return { status: STATUS_CODES.UNAUTHORIZED, message: MESSAGES.ERROR.INVALID_CREDENTIALS };
+      if (error.code === "auth/invalid-email") return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_EMAIL };
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
   async signInWithGoogle(user) {
     try {
-      const isUserExist = await authRepository.getUserByEmail(user.email);
-      if (!isUserExist) {
-        return {
-          status: 404,
-          message: "Akun Tidak Terdeteksi, silahkan ",
-        };
-      }
+      if (!user?.email || !user?.uid) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_GOOGLE_DATA };
 
-      await updateLimitOCR(user.uid);
-      return {
-        status: 200,
-        data: { user },
-        message: "Login Successful",
-      };
+      const userData = await authRepository.getUserByEmail(user.email);
+      if (!userData) return { status: STATUS_CODES.NOT_FOUND, message: MESSAGES.ERROR.USER_NOT_FOUND };
+
+      await this.updateLimitOCR(user.uid);
+
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.LOGIN, data: { userId: user.uid, email: user.email } };
     } catch (error) {
-      console.error(error);
-      throw new Error(error);
+      console.error("Google sign-in error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
   async registerWithGoogle(user) {
     try {
-      // Ensure that user.email is present
-      if (!user || !user.email || !user.uid) {
-        throw new Error("User email or uid is missing");
-      }
+      if (!user?.email || !user?.uid) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_GOOGLE_DATA };
 
       const existingUser = await authRepository.getUserByEmail(user.email);
+      if (existingUser) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.EMAIL_IN_USE };
 
-      // Check if the user already exists
-      if (!existingUser) {
-        const userEntityInstance = new userEntity({
-          userId: user.uid,
-          email: user.email,
-          username: user.displayName || "User",
-          currencyChoice: "IDR",
-          limitOCR: {
-            limit: 3,
-            used: 0,
-            resetDate: new Date()
-          },
-        });
+      const userData = new userEntity({
+        userId: user.uid,
+        email: user.email,
+        username: user.displayName || "User",
+        foto: user.photoURL || null,
+        currencyChoice: "IDR",
+        limitOCR: { limit: 3, used: 0, resetDate: new Date() },
+      });
 
-        const createdUser = await authRepository.createUser(userEntityInstance);
+      await authRepository.createUser(userData);
 
-        if (!createdUser || !createdUser.userId) {
-          throw new Error("Gagal menambahkan user ke database.");
-        }
-
-        console.log("User berhasil ditambahkan:", createdUser);
-      }
-
-
-      // Return successful response
-      return {
-        status: 200,
-        data: { user },
-        message: "Registration successful",
-      };
+      return { status: STATUS_CODES.CREATED, message: MESSAGES.SUCCESS.REGISTRATION, data: { userId: user.uid, email: user.email } };
     } catch (error) {
-      console.error("Registration failed:", error); // Improved error logging
-
-      // Provide specific error message and return status 500
-      return {
-        status: 500,
-        message: `Registration failed: ${error.message || error}`,
-      };
+      console.error("Google registration error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
   async signOut() {
     try {
-      const user = auth.currentUser;
-
-      if (user) {
-        await signOut(auth);
-        return { status: 200, message: "Sign out successfully" };
-      } else {
-        throw new Error("User is not authenticated");
-      }
+      if (!auth.currentUser) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.NOT_AUTHENTICATED };
+      await signOut(auth);
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.LOGOUT };
     } catch (error) {
-      console.error(error);
-      throw new Error("Sign out failed");
+      console.error("Sign-out error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
   async updateProfile(user, username, photo, currencyChoice, no_hp) {
     try {
-      let photoUrl
+      if (!user?.uid) return { status: STATUS_CODES.UNAUTHORIZED, message: MESSAGES.ERROR.NOT_AUTHENTICATED };
+
+      let photoUrl = null;
       if (photo) {
-        const buffer = Buffer.from(photo); // Konversi dari ArrayBuffer ke Buffer
-
-        const compressedImage = await sharp(buffer)
-          .jpeg({ quality: 70 }) // Kompresi gambar dengan kualitas 80%
-          .toBuffer();
-
-        photoUrl = photo;
-        if (compressedImage) {
-          const url = await firebases.uploadImageToFirebase(compressedImage, {
-            fileName: `profile/${user.uid}-${Date.now()}.jpg`,
-            mimetype: "image/jpeg",
-          });
-          if (!url) {
-            throw new Error("Failed to upload image");
-          }
-          console.log("Image URL:", url);
-          photoUrl = url;
-        }
+        const buffer = Buffer.from(photo);
+        const compressedImage = await sharp(buffer).jpeg({ quality: 70 }).resize(300, 300, { fit: "cover" }).toBuffer();
+        photoUrl = await firebases.uploadImageToFirebase(compressedImage, {
+          fileName: `profile/${user.uid}-${Date.now()}.jpg`,
+          mimetype: "image/jpeg",
+        });
+        if (!photoUrl) return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.UPLOAD_FAILED };
       }
 
-      const userId = user.uid;
-      const email = user.email;
-
-      const updatedUser = new userEntity({
-        userId,
-        email,
-        username,
-        foto: photoUrl,
-        currencyChoice,
-        no_hp,
-      });
-
-      const missingFields = updatedUser.validateFields();
-      if (missingFields.length > 0) {
-        throw new Error(`Missing fields: ${missingFields.join(", ")}`);
-      }
-
+      const updatedUser = new userEntity({ userId: user.uid, email: user.email, username, foto: photoUrl, currencyChoice, no_hp });
       const filledFields = updatedUser.getFilledFields();
-      if (!updatedUser.hasAnyValue()) {
-        throw new Error("No fields to update");
-      }
+      if (!Object.keys(filledFields).length) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.NO_CHANGES };
 
-      await authRepository.updateUser(userId, filledFields);
-      return {
-        status: 200,
-        message: "Profile updated successfully",
-        data: filledFields,
-      };
+      await authRepository.updateUser(user.uid, filledFields);
+
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.PROFILE_UPDATE, data: filledFields };
     } catch (error) {
-      console.error(error);
-      throw error;
+      console.error("Profile update error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
   async signInGoogleAdmin(user) {
     try {
-      const isUserExist = await authRepository.getUserByEmail(user.email);
-      if (!isUserExist) {
-        return {
-          status: 404,
-          message: "Akun Tidak Terdeteksi, silahkan ",
-        };
-      }
+      if (!user?.email || !user?.uid) return { status: STATUS_CODES.BAD_REQUEST, message: MESSAGES.ERROR.INVALID_GOOGLE_DATA };
 
-      // Check if the user is an admin
-      if (isUserExist.role === "admin") {
-        return {
-          status: 200,
-          data: { user },
-          message: "Admin login successful",
-        };
-      } else {
-        return {
-          status: 403,
-          message: "Access denied. You are not an admin.",
-        };
-      }
+      const userData = await authRepository.getUserByEmail(user.email);
+      if (!userData) return { status: STATUS_CODES.NOT_FOUND, message: MESSAGES.ERROR.USER_NOT_FOUND };
+      if (userData.role !== "admin") return { status: STATUS_CODES.FORBIDDEN, message: MESSAGES.ERROR.ACCESS_DENIED };
+
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.ADMIN_LOGIN, data: { userId: user.uid, email: user.email, role: userData.role } };
     } catch (error) {
-      console.error(error);
-      throw new Error("Login failed");
+      console.error("Google admin sign-in error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
   async getUserData(userId) {
     try {
+      if (!userId) return { status: STATUS_CODES.BAD_REQUEST, message: "User ID required." };
       const user = await authRepository.getUserById(userId);
-      if (!user) {
-        throw new Error("User not found");
-      }
-      return {
-        status: 200,
-        data: user,
-        message: "User data retrieved successfully",
-      };
+      if (!user) return { status: STATUS_CODES.NOT_FOUND, message: MESSAGES.ERROR.USER_NOT_FOUND };
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.USER_DATA, data: user };
     } catch (error) {
-      console.error(error);
-      throw error;
+      console.error("Get user error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
     }
   }
 
-  async getAllUsers(_user) {
+  async getAllUsers(user) {
     try {
-      const user = await getUserDatas(_user.uid);
-      if (!user.data || !user.data.role || user.data.role !== "admin") {
-        return {
-          status: 403,
-          message: "Access denied. You are not an admin.",
-        };
-      }
+      if (!user?.uid) return { status: STATUS_CODES.UNAUTHORIZED, message: MESSAGES.ERROR.NOT_AUTHENTICATED };
+
+      const adminUser = await authRepository.getUserById(user.uid);
+      if (!adminUser || adminUser.role !== "admin") return { status: STATUS_CODES.FORBIDDEN, message: MESSAGES.ERROR.ACCESS_DENIED };
+
       const users = await authRepository.getAllUsers();
-      if (!users || users.length === 0) {
-        return {
-          status: 404,
-          message: "No users found",
-        };
+      if (!users?.length) return { status: STATUS_CODES.NOT_FOUND, message: "No users found." };
+
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.USERS, data: { users, totalCount: users.length } };
+    } catch (error) {
+      console.error("Get all users error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
+    }
+  }
+
+  async deleteUserbyAdmin(id, user) {
+    try {
+      if (!user?.uid) return { status: STATUS_CODES.UNAUTHORIZED, message: MESSAGES.ERROR.NOT_AUTHENTICATED };
+      if (!id) return { status: STATUS_CODES.BAD_REQUEST, message: "User ID required." };
+
+      const adminUser = await authRepository.getUserById(user.uid);
+      if (!adminUser || adminUser.role !== "admin") return { status: STATUS_CODES.FORBIDDEN, message: MESSAGES.ERROR.ACCESS_DENIED };
+
+      const deletedUser = await authRepository.deleteUser(id);
+      if (!deletedUser) return { status: STATUS_CODES.NOT_FOUND, message: MESSAGES.ERROR.USER_NOT_FOUND };
+
+      return { status: STATUS_CODES.OK, message: MESSAGES.SUCCESS.USER_DELETED, data: deletedUser };
+    } catch (error) {
+      console.error("Delete user error:", error);
+      return { status: STATUS_CODES.SERVER_ERROR, message: MESSAGES.ERROR.GENERAL };
+    }
+  }
+
+  async updateLimitOCR(userId) {
+    try {
+      if (!userId) throw new Error("User ID required.");
+      const user = await authRepository.getUserById(userId);
+      if (!user) throw new Error("User not found.");
+
+      let limitOCR = user.limitOCR || { limit: 3, used: 0, resetDate: new Date() };
+      const now = new Date();
+
+      if (!limitOCR.resetDate || now > new Date(limitOCR.resetDate)) {
+        limitOCR = { ...limitOCR, used: 0, resetDate: new Date(now.getTime() + 24 * 60 * 60 * 1000) };
+        await authRepository.updateUser(userId, { limitOCR });
       }
+
       return {
-        status: 200,
-        data: users,
-        message: "Users retrieved successfully",
+        status: STATUS_CODES.OK,
+        message: limitOCR.used === 0 ? MESSAGES.SUCCESS.LIMIT_RESET : "OCR limit checked.",
+        data: { limit: limitOCR.limit, used: limitOCR.used, remaining: limitOCR.limit - limitOCR.used, resetDate: limitOCR.resetDate },
       };
     } catch (error) {
-      console.error(error);
-      throw error;
+      console.error("OCR limit error:", error);
+      throw new Error(MESSAGES.ERROR.GENERAL);
     }
   }
-
-async deleteUserbyAdmin(id, user) {
-  try {
-    const users = await getUserDatas(user.uid);
-    if (!users.data || !users.data.role || users.data.role !== "admin") {
-      return {
-        status: 403,
-        message: "Access denied. You are not an admin.",
-      };
-    }
-
-    const deletedUser = await authRepository.deleteUser(id);
-
-    return {
-      data: deletedUser,
-      status: 200,
-      message: "User successfully deleted",
-    };
-  } catch (error) {
-    throw error;
-  }
 }
-
-
-}
-
-
-const getUserDatas = async (userId) => {
-  try {
-    const user = await authRepository.getUserById(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-    return {
-      status: 200,
-      data: user,
-      message: "User data retrieved successfully",
-    };
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-const updateLimitOCR = async (userId) => {
-  try {
-    const user = await authRepository.getUserById(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-    console.log("User signed in with Google:", user);
-    const limitOCR = user.limitOCR;
-
-    // Update the used count and reset date
-    if (!limitOCR.resetDate || new Date() > limitOCR.resetDate) {
-      limitOCR.used = 0; // Reset used count if reset date has passed
-      limitOCR.resetDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // Reset after 24 hours
-      await authRepository.updateUser(userId, { limitOCR });
-      return {
-        status: 200,
-        data: limitOCR,
-        message: "Limit OCR updated successfully",
-      };
-    }
-    return;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-  
-
-
-}
-
 
 module.exports = new AuthService();
